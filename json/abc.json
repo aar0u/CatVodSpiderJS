@@ -1,0 +1,56 @@
+{
+  "lives": [
+    {
+      "epg": "https://epg.112114.xyz/?ch={name}&date={date}",
+      "logo": "https://epg.112114.xyz/logo/{name}.png",
+      "name": "直播ipv6",
+      "pass": true,
+      "type": "0",
+      "url": "https://fanmingming.com/txt?url=https://live.fanmingming.com/tv/m3u/ipv6.m3u"
+    }
+  ],
+  "sites": [
+    {
+      // "api": "csp_ABC",
+      "api": "../js/123anime.js",
+      "changeable": 0,
+      "key": "123animehub",
+      "name": "B & C",
+      "searchable": 1,
+      "timeout": 50,
+      "ext": {
+        "box": "TVBox"
+      },
+      "type": 3
+    },
+    {
+      "api": "../js/tiantian.js",
+      "key": "tiantian",
+      "name": "⛄┃天天影视┃⛄",
+      "playerType": 0,
+      "timeout": 30,
+      "ext": {
+        "box": "TVBox"
+      },
+      "type": 3
+    },
+    {
+      "api": "csp_YHDM",
+      "changeable": 1,
+      "key": "anime",
+      "name": "YHDM",
+      "searchable": 1,
+      "type": 3
+    },
+    {
+      "api": "csp_Zxzj",
+      "changeable": 1,
+      "key": "zxzj",
+      "name": "在线之家",
+      "searchable": 1,
+      "type": 3
+    }
+  ],
+  "spider": "../jar/custom_spider.jar",
+  "wallpaper": "https://picsum.photos/1280/720/?blur=10"
+}

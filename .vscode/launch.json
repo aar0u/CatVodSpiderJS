@@ -2,8 +2,8 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "testSpider",
-      "program": "${workspaceFolder}/tester/testSpider.js",
+      "name": "testRunner",
+      "program": "${workspaceFolder}/tester/testRunner.js",
       "request": "launch",
       "skipFiles": ["<node_internals>/**"],
       "type": "node",

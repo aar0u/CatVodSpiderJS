@@ -252,7 +252,6 @@ class Spider {
 
     async getHtml(url = this.siteUrl, proxy = false, headers = this.getHeader()) {
         let html = await this.fetch(url, null, headers, false, false, 0, proxy)
-        await this.jadeLog.info(html)
         if (!_.isEmpty(html)) {
             return load(html)
         } else {
@@ -537,9 +536,9 @@ class Spider {
         this.vodList = []
         await this.jadeLog.info("正在解析首页类别", true)
         await this.setHome(filter)
-        await this.jadeLog.debug(`首页类别内容为:${this.result.home(this.classes, [], this.filterObj)}`)
+        await this.jadeLog.debug(`首页类别内容为:${this.result.home(this.classes, this.vodList, this.filterObj)}`)
         await this.jadeLog.info("首页类别解析完成", true)
-        return this.result.home(this.classes, [], this.filterObj)
+        return this.result.home(this.classes, this.vodList, this.filterObj)
     }
 
     async setHomeVod() {

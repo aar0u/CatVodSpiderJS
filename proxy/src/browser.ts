@@ -12,10 +12,12 @@ async function getBrowser() {
   if (!browserInstance) {
     browserInstance = await puppeteer.launch({
       headless: false,
+      defaultViewport: null, // 阻止打开空白标签页
       args: [
         "--disable-blink-features=AutomationControlled",
         "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "--window-size=720,800",
+        // "--no-startup-window",
       ],
     });
     console.log("Browser launched");
@@ -49,7 +51,6 @@ function startTimeoutCheck() {
 export default async function (url, handler, onSuccess, onFail) {
   const browser = await getBrowser();
   const page: Page = await browser.newPage();
-  page.setViewport(null);
 
   const responseHandler = async (response: HTTPResponse) => {
     const shouldStop = await handler(response, page, onSuccess, onFail);
