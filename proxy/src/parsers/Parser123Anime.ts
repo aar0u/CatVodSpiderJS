@@ -94,7 +94,7 @@ export class Parser123Anime implements BaseParser {
       ...new Set(
         $(".episodes.range a[data-base]")
           .get()
-          .map((el) => $(el).attr("data-base")?.padStart(3, "0") ?? "")
+          .map((el) => $(el).attr("data-base")?.padStart(3, "0") ?? ""),
       ),
     ].sort((a, b) => parseInt(a) - parseInt(b));
 

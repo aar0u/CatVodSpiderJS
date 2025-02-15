@@ -74,7 +74,7 @@ export default async function (url, handler, onSuccess, onFail) {
     onFail("Timeout");
   }, TIMEOUT_PAGE);
 
-  console.log(`Navigate to ${url}`);
+  console.log(`Open new page: ${url}`);
   page
     .goto(url, {
       waitUntil: "networkidle2",
