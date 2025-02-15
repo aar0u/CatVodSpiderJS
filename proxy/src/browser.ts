@@ -11,8 +11,8 @@ const TIMEOUT_PAGE = 2 * MIN;
 async function getBrowser() {
   if (!browserInstance) {
     browserInstance = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null, // 阻止打开空白标签页
+      // headless: false,
+      defaultViewport: null,
       args: [
         "--disable-blink-features=AutomationControlled",
         "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -52,11 +52,15 @@ export default async function (url, handler, onSuccess, onFail) {
   const browser = await getBrowser();
   const page: Page = await browser.newPage();
 
+  const cleanUp = () => {
+    page.off("response", responseHandler);
+    page.close().catch(console.error);
+  };
+
   const responseHandler = async (response: HTTPResponse) => {
     const shouldStop = await handler(response, page, onSuccess, onFail);
-    if (shouldStop) {
-      page.off("response", responseHandler);
-      page.close().catch(console.error);
+    if (shouldStop && !page.isClosed()) {
+      cleanUp();
     }
   };
 
@@ -64,11 +68,10 @@ export default async function (url, handler, onSuccess, onFail) {
 
   setTimeout(async () => {
     if (!page.isClosed()) {
-      page.off("response", responseHandler);
       console.log(`Force closing page after ${TIMEOUT_PAGE}ms`);
-      page.close().catch(console.error);
-      onFail("Timeout");
+      cleanUp();
     }
+    onFail("Timeout");
   }, TIMEOUT_PAGE);
 
   console.log(`Navigate to ${url}`);

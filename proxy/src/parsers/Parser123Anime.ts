@@ -9,25 +9,16 @@ export class Parser123Anime implements BaseParser {
 
   handleResponse = async (response, page, onSuccess, onFail) => {
     try {
-      try {
-        const text = await response.text();
-        if (text.includes(".vtt") && text.length < 1000) {
-          console.log("11111", text);
-        }
-      } catch (err) {
-        console.log(err.message);
-      }
-
       const url = response.url().toLowerCase();
       if (!url.match(/\.(mp4|m3u8|vtt)/)) return false;
 
-      console.log("(m3u8|vtt ", url);
+      console.log("(m3u8|vtt) ", url);
 
       if (url.endsWith("m3u8") && !this.playable.url) {
-        console.log(`Captured ${url}`);
+        console.log(`### Captured - ${url}`);
         this.playable.url = url;
       } else if (url.endsWith(".vtt") && url.includes("eng")) {
-        console.log(`Subtitle ${url}`);
+        console.log(`### Subtitle - ${url}`);
         this.playable.subs = [url];
       }
 
@@ -36,6 +27,7 @@ export class Parser123Anime implements BaseParser {
         const { vod, episodes } = this.parse(await page.content());
         this.playable.vod = vod;
         this.playable.episodes = episodes;
+        console.log("### Response back to client");
         onSuccess(this.playable);
         return true;
       } else {
@@ -102,7 +94,7 @@ export class Parser123Anime implements BaseParser {
       ...new Set(
         $(".episodes.range a[data-base]")
           .get()
-          .map((el) => $(el).attr("data-base")?.padStart(3, "0") ?? ""),
+          .map((el) => $(el).attr("data-base")?.padStart(3, "0") ?? "")
       ),
     ].sort((a, b) => parseInt(a) - parseInt(b));
 
