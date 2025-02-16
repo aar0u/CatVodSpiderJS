@@ -3,16 +3,11 @@ import { IncomingMessage, ServerResponse } from "http";
 import browser from "../browser";
 import { CACHE, CACHE_TTL } from "../cache/cache";
 import { parserFactory } from "../parsers/parserFactory";
+import { getProtocolAndHost } from "../utils/urlUtils";
 
 export const urlController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
-    if (!req.url || !req.headers.host) {
-      res.statusCode = 400;
-      res.end(JSON.stringify({ error: "Invalid request" }));
-      return;
-    }
-
-    const fullPath = new URL(req.url, `http://${req.headers.host}`).pathname;
+    const fullPath = new URL(req.url, getProtocolAndHost(req)).pathname;
     const targetUrl = decodeURIComponent(fullPath.split("/url/")[1]);
 
     res.setHeader("Content-Type", "application/json");

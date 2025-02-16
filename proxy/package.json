@@ -11,7 +11,9 @@
     "trailingComma": "all"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "axios": "^1.7.9",
+    "chalk": "^5.4.1",
     "cheerio": "^1.0.0",
     "puppeteer": "^24.2.0"
   },

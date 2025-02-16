@@ -10,9 +10,9 @@ export default [
       parser: parserTypescript, // 使用 TypeScript 解析器
     },
     plugins: {
-      "import": pluginImport,
+      import: pluginImport,
       "@typescript-eslint": pluginTypescript,
-      "prettier": pluginPrettier,
+      prettier: pluginPrettier,
     },
     rules: {
       ...pluginTypescript.configs.recommended.rules,
@@ -20,12 +20,12 @@ export default [
       "prettier/prettier": "error",
       "comma-dangle": "off",
       "max-len": "off",
-      "indent": "off",
-      "quotes": "off", // this and above taken care by prettier
+      indent: "off",
+      quotes: "off", // this and above taken care by prettier
       "import/order": [
         "error",
         {
-          "groups": [
+          groups: [
             "builtin",
             "external",
             "internal",
@@ -35,7 +35,7 @@ export default [
             "type",
           ],
           "newlines-between": "always",
-          "alphabetize": {
+          alphabetize: {
             order: "asc",
             caseInsensitive: true,
           },

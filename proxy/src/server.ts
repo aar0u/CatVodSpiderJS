@@ -1,12 +1,18 @@
 import { createServer } from "http";
 
-import { closeController } from "./controllers/closeController";
+import { config } from "./config/config";
+import { fileController } from "./controllers/fileController";
 import { jsonController } from "./controllers/jsonController";
+import { subController } from "./controllers/subController";
 import { urlController } from "./controllers/urlController";
+import { getProtocolAndHost } from "./utils/urlUtils";
 
 const routes = {
+  "/js/": fileController("../../../js").handle,
+  "/lib/": fileController("../../../lib").handle,
+  "/json/": fileController("../../../json").handle,
   "/url/": urlController.handle,
-  "/closebrowser": closeController.handle,
+  "/sub/": subController.handle,
   "/json": jsonController.handle,
 };
 
@@ -17,7 +23,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const route = new URL(req.url, `http://${req.headers.host}`).pathname;
+  const route = new URL(req.url, getProtocolAndHost(req)).pathname;
 
   const handler = Object.entries(routes).find(
     ([path]) => route.startsWith(path) || route === path,
@@ -31,6 +37,6 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(3000, () => {
+server.listen(config.port, () => {
   console.log("Server running at http://localhost:3000");
 });

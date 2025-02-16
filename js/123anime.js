@@ -5,6 +5,7 @@ import { VodDetail } from "../lib/vod.js";
 
 class ABC extends Spider {
   PROXY_URL = "http://192.168.31.171:3000/url/";
+  SUB_URL = "http://192.168.31.171:3000/sub/";
   DOMAIN = "https://123animehub.cc";
 
   async homeContent(filter) {
@@ -75,7 +76,7 @@ class ABC extends Spider {
     const url = this.PROXY_URL + this.DOMAIN + showName;
 
     try {
-      const res = await this.fetch(url);
+      const res = await req(url, { method: "get" });
       const json = JSON.parse(res);
 
       const episodes = json.episodes;
@@ -104,12 +105,19 @@ class ABC extends Spider {
     Utils.log(`#### setPlay called from super.play`);
     const url = this.PROXY_URL + this.DOMAIN + id;
     try {
-      const res = await this.fetch(url);
+      const res = await req(url, { method: "get" });
       const json = JSON.parse(res);
 
-      const subUrl = json.subs ? json.subs[0] : "";
-      // Spider class don't have sub method, directly set to result
-      this.result.setSubs([{ name: "Eng", ext: "vtt", url: subUrl }]);
+      if (json.subs) {
+        // Spider class don't have sub method, directly set to result
+        this.result.setSubs([
+          {
+            name: "sub",
+            format: "application/x-subrip",
+            url: this.SUB_URL + json.subs[0],
+          },
+        ]);
+      }
 
       this.playUrl = json.url;
     } catch (e) {
