@@ -77,13 +77,13 @@ class ABC extends Spider {
 
     try {
       const res = await req(url, { method: "get" });
-      const json = JSON.parse(res);
+      const json = JSON.parse(res.content);
 
       const episodes = json.episodes;
       const total = episodes.length;
-      let playUrl = `001$${showName}#`;
+      let playUrl = "";
 
-      for (let i = 1; i < total; i++) {
+      for (let i = 0; i < total; i++) {
         const episode = episodes[i];
         playUrl += `${episode}$${showName}/episode/${episode}`;
         playUrl += i < total - 1 ? "#" : "$$$";
@@ -106,7 +106,7 @@ class ABC extends Spider {
     const url = this.PROXY_URL + this.DOMAIN + id;
     try {
       const res = await req(url, { method: "get" });
-      const json = JSON.parse(res);
+      const json = JSON.parse(res.content);
 
       if (json.subs) {
         // Spider class don't have sub method, directly set to result

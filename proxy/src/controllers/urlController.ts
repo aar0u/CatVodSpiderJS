@@ -1,13 +1,14 @@
 import { IncomingMessage, ServerResponse } from "http";
 
 import browser from "../browser";
-import { CACHE, CACHE_TTL } from "../cache/cache";
+import { getCache } from "../cache/cache";
+import { BaseParser } from "../parsers/BaseParser";
 import { parserFactory } from "../parsers/parserFactory";
-import { getProtocolAndHost } from "../utils/urlUtils";
+import { color, getOrigin, normalizeUrl } from "../utils";
 
 export const urlController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
-    const fullPath = new URL(req.url, getProtocolAndHost(req)).pathname;
+    const fullPath = new URL(req.url, getOrigin(req)).pathname;
     const targetUrl = decodeURIComponent(fullPath.split("/url/")[1]);
 
     res.setHeader("Content-Type", "application/json");
@@ -17,25 +18,23 @@ export const urlController = {
       return;
     }
 
-    const cached = CACHE[targetUrl];
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`Cache hit for ${targetUrl}`);
+    const cached = await getCache(normalizeUrl(targetUrl));
+    if (cached) {
+      console.log(`Serving ${color.info("cached")} for ${targetUrl}`);
       res.end(JSON.stringify(cached.item));
       return;
     }
 
     try {
-      const parser = parserFactory.createParser(targetUrl);
+      const parser: BaseParser = parserFactory.createParser(targetUrl);
+      console.log(`Using handler: ${parser.constructor.name}.handleResponse`);
+
       let isCompleted = false; // 添加状态锁防止多次 resolve
 
       const onSuccess = (data) => {
         if (isCompleted) return;
         isCompleted = true;
 
-        CACHE[targetUrl] = {
-          item: data,
-          timestamp: Date.now(),
-        };
         res.end(JSON.stringify(data));
       };
 

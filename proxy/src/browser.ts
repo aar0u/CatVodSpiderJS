@@ -1,5 +1,8 @@
 import puppeteer, { Browser, HTTPResponse, Page } from "puppeteer";
 
+import { BaseParser } from "./parsers/BaseParser";
+import { color, logError } from "./utils";
+
 let browserInstance: Browser | null = null;
 let lastAccessTime = Date.now();
 let timeoutId: NodeJS.Timeout | null = null;
@@ -48,28 +51,35 @@ function startTimeoutCheck() {
   }, 60000); // 每分钟检查一次
 }
 
-export default async function (url, handler, onSuccess, onFail) {
+export default async function (
+  url: string,
+  handler: BaseParser["handleResponse"],
+  onSuccess: (data: unknown) => void,
+  onFail: (error: string | Error) => void,
+) {
   const browser = await getBrowser();
   const page: Page = await browser.newPage();
-
-  const cleanUp = () => {
-    page.off("response", responseHandler);
-    page.close().catch(console.error);
-  };
 
   const responseHandler = async (response: HTTPResponse) => {
     const shouldStop = await handler(response, page, onSuccess, onFail);
     if (shouldStop && !page.isClosed()) {
-      cleanUp();
+      await page.close().catch((err) => {
+        logError(`Closing - ${err.stack || err.message}`);
+      });
     }
   };
 
   page.on("response", responseHandler);
+  page.once("close", () => {
+    page.off("response", responseHandler);
+  });
 
   setTimeout(async () => {
     if (!page.isClosed()) {
-      console.log(`Force closing page after ${TIMEOUT_PAGE}ms`);
-      cleanUp();
+      console.log(color.caution(`Force closing page after ${TIMEOUT_PAGE}ms`));
+      await page.close().catch((err) => {
+        logError(`Force closing - ${err.stack || err.message}`);
+      });
     }
     onFail("Timeout");
   }, TIMEOUT_PAGE);
@@ -80,5 +90,5 @@ export default async function (url, handler, onSuccess, onFail) {
       waitUntil: "networkidle2",
       timeout: 60000,
     })
-    .catch((error) => console.error(`Error on browser: ${error}`));
+    .catch((err) => logError(`Browser - ${err.stack || err.message}`));
 }

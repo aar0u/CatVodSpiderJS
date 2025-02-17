@@ -5,7 +5,7 @@ import { fileController } from "./controllers/fileController";
 import { jsonController } from "./controllers/jsonController";
 import { subController } from "./controllers/subController";
 import { urlController } from "./controllers/urlController";
-import { getProtocolAndHost } from "./utils/urlUtils";
+import { getOrigin } from "./utils";
 
 const routes = {
   "/js/": fileController("../../../js").handle,
@@ -23,7 +23,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const route = new URL(req.url, getProtocolAndHost(req)).pathname;
+  const route = new URL(req.url, getOrigin(req)).pathname;
 
   const handler = Object.entries(routes).find(
     ([path]) => route.startsWith(path) || route === path,

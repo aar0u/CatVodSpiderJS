@@ -3,10 +3,9 @@ import { IncomingMessage, ServerResponse } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import chalk from "chalk";
 import mime from "mime-types";
 
-import { getProtocolAndHost } from "../utils/urlUtils";
+import { color, getOrigin } from "../utils";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,10 +18,10 @@ export const fileController = (baseDir: string) => {
         const userAgent = req.headers["user-agent"] || "unknown";
 
         console.log(
-          `${chalk.green(method)} ${chalk.blue(req.url || "/")} "${chalk.yellow(userAgent)}"`,
+          `${color.success(method)} ${color.info(req.url || "/")} "${color.notice(userAgent)}"`,
         );
 
-        const url = new URL(req.url || "", getProtocolAndHost(req));
+        const url = new URL(req.url || "", getOrigin(req));
         const baseDirName = path.basename(path.resolve(baseDir));
         const relativePath = url.pathname.replace(
           new RegExp(`^/(${baseDirName})/`),

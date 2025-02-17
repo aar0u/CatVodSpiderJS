@@ -15,7 +15,9 @@
     "axios": "^1.7.9",
     "chalk": "^5.4.1",
     "cheerio": "^1.0.0",
-    "puppeteer": "^24.2.0"
+    "puppeteer": "^24.2.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.24.0",

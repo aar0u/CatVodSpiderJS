@@ -1,11 +1,12 @@
 import axios from "axios";
-import chalk from "chalk";
 import * as cheerio from "cheerio";
 
 import { BaseParser } from "./BaseParser";
+import { CACHE_TTL, setCache } from "../cache/cache";
 import { config } from "../config/config";
 import { Playable } from "../models/Playable";
 import { Vod } from "../models/Vod";
+import { color, logError, normalizeUrl } from "../utils";
 
 export class Parser123Anime implements BaseParser {
   private playable = new Playable();
@@ -18,15 +19,18 @@ export class Parser123Anime implements BaseParser {
       console.log("(m3u8|vtt) ", url);
 
       if (url.endsWith("m3u8") && !this.playable.url) {
-        console.log(`${chalk.green("Captured")} - ${url}`);
+        // immediately stop other handling
+        page.off("response", this.handleResponse);
+
+        this.playable.url = url;
+        console.log(`${color.success("Captured")} - ${url}`);
 
         const subUrl = await this.fetchSubUrl(page.url());
         if (subUrl) {
           this.playable.subs = [subUrl];
         }
-        this.playable.url = url;
       } else if (url.endsWith(".vtt") && url.includes("eng")) {
-        console.log(`${chalk.green("Subtitle")} - ${url}`);
+        console.log(`${color.success("Subtitle")} - ${url}`);
         this.playable.subs = [url];
       }
 
@@ -35,15 +39,25 @@ export class Parser123Anime implements BaseParser {
         const { vod, episodes } = this.parse(await page.content());
         this.playable.vod = vod;
         this.playable.episodes = episodes;
-        console.log(chalk.green("Response back to client"));
+
+        // details to be updated when accessing episode
+        const detailPage = page.url().replace(/\/\d+\/?$/, "");
+        if (detailPage === page.url()) {
+          setCache(detailPage, this.playable);
+        } else {
+          setCache(normalizeUrl(page.url()), this.playable, CACHE_TTL);
+          setCache(detailPage, this.playable);
+        }
+
+        console.log(color.success("Response to client"));
         onSuccess(this.playable);
         return true;
       } else {
         return false;
       }
-    } catch (error) {
-      console.error(`${chalk.bgRed("Error")} on capturing: ${error.stack}`);
-      onFail(error);
+    } catch (err) {
+      logError(`Capturing - ${err.stack || err.message}`);
+      onFail(err);
       return true;
     }
   };

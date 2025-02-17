@@ -2,9 +2,8 @@ import crypto from "crypto";
 import { IncomingMessage, ServerResponse } from "http";
 
 import axios from "axios";
-import chalk from "chalk";
 
-import { getProtocolAndHost } from "../utils/urlUtils";
+import { color, getOrigin } from "../utils";
 
 // Base64 解码
 function base64Decode(data: string): string {
@@ -44,18 +43,18 @@ function verifyAndDecrypt(data: string): string {
 export const jsonController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
     try {
-      const host = getProtocolAndHost(req);
+      const host = getOrigin(req);
       const url = new URL(req.url || "", host);
       const config = url.searchParams.get("cf");
 
       const urls = (await axios.get(`${host}/json/livecfg/mul.json`)).data;
       const cfUrl = urls[config];
-      console.log(`Retrieving ${chalk.green(config)} from ${cfUrl}`);
+      console.log(`Retrieving ${color.info(config)} from ${cfUrl}`);
       const response = await axios.get(cfUrl, {
         headers: { "User-Agent": "okhttp/5.0.0-alpha.14" },
       });
 
-      let jsonData: unknown;
+      let jsonData: { sites: { name: string }[] };
       if (typeof response.data === "string") {
         const decryptedData = verifyAndDecrypt(response.data);
         const cleanedData = decryptedData.replace(/^\s*?\/\/.*?\r?\n/gm, ""); // 移除注释
@@ -64,11 +63,15 @@ export const jsonController = {
         jsonData = response.data;
       }
 
-      // 过滤掉 sites 中 name 包含 💓 的项 (网盘)
+      // 过滤掉 sites 中网盘资源
       const filteredSites = jsonData.sites
         .map((site: { name: string }) => {
-          if (site.name.includes("💓")) {
-            console.log(`${chalk.dim("Ignored")} site:`, JSON.stringify(site)); // 打印被忽略的 site
+          const ignoreKeywords = ["💓", "盘", "玩偶"];
+          if (ignoreKeywords.some((keyword) => site.name.includes(keyword))) {
+            console.log(
+              `${color.muted("Ignored")} site:`,
+              JSON.stringify(site),
+            );
             return null; // 标记为忽略
           }
           return { ...site, change: 0 }; // 修改 change 为 0
