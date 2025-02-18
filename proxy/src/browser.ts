@@ -12,7 +12,7 @@ const TIMEOUT = 20 * MIN;
 const TIMEOUT_PAGE = 2 * MIN;
 
 async function getBrowser() {
-  if (!browserInstance) {
+  if (!browserInstance || !browserInstance.connected) {
     browserInstance = await puppeteer.launch({
       // headless: false,
       defaultViewport: null,
@@ -96,5 +96,8 @@ export default async function (
       waitUntil: "networkidle2",
       timeout: 60000,
     })
-    .catch((err) => logError(`Browser - ${err.stack || err.message}`));
+    .catch((err) => {
+      logError(`Browser - ${err.stack || err.message}`);
+      onFail(err.message);
+    });
 }
