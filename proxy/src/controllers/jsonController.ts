@@ -1,9 +1,15 @@
 import crypto from "crypto";
+import fs from "fs/promises";
 import { IncomingMessage, ServerResponse } from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import axios from "axios";
 
 import { color, getOrigin } from "../utils";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Base64 解码
 function base64Decode(data: string): string {
@@ -45,10 +51,13 @@ export const jsonController = {
     try {
       const host = getOrigin(req);
       const url = new URL(req.url || "", host);
-      const config = url.searchParams.get("cf");
 
-      const urls = (await axios.get(`${host}/json/livecfg/mul.json`)).data;
-      const cfUrl = urls[config];
+      const urls = JSON.parse(
+        await fs.readFile(path.join(__dirname, "../config/cfg.json"), "utf-8"),
+      );
+
+      const config = url.searchParams.get("cf") || urls.default;
+      const cfUrl = urls.sources[config];
       console.log(`Retrieving ${color.info(config)} from ${cfUrl}`);
       const response = await axios.get(cfUrl, {
         headers: { "User-Agent": "okhttp/5.0.0-alpha.14" },

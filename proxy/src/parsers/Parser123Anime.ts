@@ -1,13 +1,18 @@
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
 import axios from "axios";
 import * as cheerio from "cheerio";
 
 import { BaseParser } from "./BaseParser";
 import { CACHE_TTL, setCache } from "../cache/cache";
-import { config } from "../config/config";
 import { Playable } from "../models/Playable";
 import { Vod } from "../models/Vod";
 import { color, logError, normalizeUrl, retrieveSubtitle } from "../utils";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export class Parser123Anime implements BaseParser {
   private playable = new Playable();
   private isProcessing = false;
@@ -166,9 +171,9 @@ export class Parser123Anime implements BaseParser {
       return null;
     }
 
-    const subs = (
-      await axios.get(`http://localhost:${config.port}/json/livecfg/sub.json`)
-    ).data;
+    const subs = JSON.parse(
+      await fs.readFile(path.join(__dirname, "../config/sub.json"), "utf-8"),
+    );
 
     if (!subs[name]) {
       console.log(`No subtitle URL found for ${name}`);
