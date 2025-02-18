@@ -6,29 +6,38 @@ import { CACHE_TTL, setCache } from "../cache/cache";
 import { config } from "../config/config";
 import { Playable } from "../models/Playable";
 import { Vod } from "../models/Vod";
-import { color, logError, normalizeUrl } from "../utils";
+import { color, logError, normalizeUrl, retrieveSubtitle } from "../utils";
 
 export class Parser123Anime implements BaseParser {
   private playable = new Playable();
+  private isProcessing = false;
 
-  handleResponse = async (response, page, onSuccess, onFail) => {
+  constructor() {
+    // bind `this` to can access properties
+    this.handleResponse = this.handleResponse.bind(this);
+  }
+
+  async handleResponse(response, page, onSuccess, onFail) {
     try {
       const url = response.url().toLowerCase();
       if (!url.match(/\.(mp4|m3u8|vtt)/)) return false;
 
       console.log("(m3u8|vtt) ", url);
 
-      if (url.endsWith("m3u8") && !this.playable.url) {
+      if (url.endsWith("m3u8") && !this.isProcessing) {
+        this.isProcessing = true;
         // immediately stop other handling
         page.off("response", this.handleResponse);
+
+        const subUrl = await this.getSubUrl(page.url());
+        if (subUrl) {
+          this.playable.subs = [subUrl];
+        }
 
         this.playable.url = url;
         console.log(`${color.success("Captured")} - ${url}`);
 
-        const subUrl = await this.fetchSubUrl(page.url());
-        if (subUrl) {
-          this.playable.subs = [subUrl];
-        }
+        this.isProcessing = false;
       } else if (url.endsWith(".vtt") && url.includes("eng")) {
         console.log(`${color.success("Subtitle")} - ${url}`);
         this.playable.subs = [url];
@@ -41,12 +50,15 @@ export class Parser123Anime implements BaseParser {
         this.playable.episodes = episodes;
 
         // details to be updated when accessing episode
-        const detailPage = page.url().replace(/\/\d+\/?$/, "");
+        const detailPage = page.url().replace(/\/episode\/\d+\/?$/, "");
+        const { url, ...playableWithoutUrl } = this.playable;
+        void url;
         if (detailPage === page.url()) {
-          setCache(detailPage, this.playable);
+          setCache(detailPage + "/episode/001", this.playable, CACHE_TTL);
+          setCache(detailPage, playableWithoutUrl);
         } else {
           setCache(normalizeUrl(page.url()), this.playable, CACHE_TTL);
-          setCache(detailPage, this.playable);
+          setCache(detailPage, playableWithoutUrl);
         }
 
         console.log(color.success("Response to client"));
@@ -60,7 +72,7 @@ export class Parser123Anime implements BaseParser {
       onFail(err);
       return true;
     }
-  };
+  }
 
   parse(html: string): { vod: Vod; episodes: string[] } {
     const $ = cheerio.load(html);
@@ -146,7 +158,7 @@ export class Parser123Anime implements BaseParser {
     return { name: name, episode: episode };
   }
 
-  private async fetchSubUrl(url: string): Promise<string | null> {
+  private async getSubUrl(url: string): Promise<string | null> {
     const { name, episode } = this.extractInfo(url);
 
     if (!name) {
@@ -181,7 +193,10 @@ export class Parser123Anime implements BaseParser {
           const baseUrl = new URL(subtitleUrl).origin;
           const fullDownloadUrl = `${baseUrl}${downloadLink}`;
           console.log(`Zip file for Episode ${episode} - ${fullDownloadUrl}`);
-          return fullDownloadUrl;
+
+          const subId = await retrieveSubtitle(name, episode, fullDownloadUrl);
+
+          return `/sub/${subId}`;
         } else {
           console.error(`No download link found for episode ${episode}`);
         }

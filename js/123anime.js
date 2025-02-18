@@ -4,8 +4,8 @@ import * as Utils from "../lib/utils.js";
 import { VodDetail } from "../lib/vod.js";
 
 class ABC extends Spider {
-  PROXY_URL = "http://192.168.31.171:3000/url/";
-  SUB_URL = "http://192.168.31.171:3000/sub/";
+  PROXY_URL = "http://192.168.31.171:3000";
+
   DOMAIN = "https://123animehub.cc";
 
   async homeContent(filter) {
@@ -35,7 +35,43 @@ class ABC extends Spider {
     Utils.log(
       `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}`
     );
-    return super.play(flag, id, vipFlags);
+    Utils.log(`#### setPlay called from super.play`);
+    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${id}`;
+    try {
+      const res = await req(url, { method: "get", timeout: 25000 });
+      const json = JSON.parse(res.content);
+
+      if (json.subs) {
+        const subId = json.subs[0];
+        const ext = subId.split(".").pop().toLowerCase();
+
+        const subFormat = (() => {
+          switch (ext) {
+            case "vtt":
+              return "text/vtt";
+            case "ass":
+            case "ssa":
+              return "text/x-ssa";
+            default:
+              return "application/x-subrip";
+          }
+        })();
+
+        // Spider class don't have sub method, directly set to result
+        this.result.setSubs([
+          {
+            name: "sub",
+            format: subFormat,
+            url: this.PROXY_URL + subId,
+          },
+        ]);
+      }
+
+      return this.result.play(json.url);
+    } catch (e) {
+      Utils.log(e.stack);
+    }
+    return this.result.play("");
   }
 
   async setHome(filter) {
@@ -73,10 +109,10 @@ class ABC extends Spider {
   }
 
   async setDetail(showName) {
-    const url = this.PROXY_URL + this.DOMAIN + showName;
+    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${showName}`;
 
     try {
-      const res = await req(url, { method: "get" });
+      const res = await req(url, { method: "get", timeout: 25000 });
       const json = JSON.parse(res.content);
 
       const episodes = json.episodes;
@@ -96,30 +132,6 @@ class ABC extends Spider {
       vodDetail.load_data(json.vod);
 
       this.vodDetail = vodDetail;
-    } catch (e) {
-      Utils.log(e.stack);
-    }
-  }
-
-  async setPlay(flag, id, vipFlags) {
-    Utils.log(`#### setPlay called from super.play`);
-    const url = this.PROXY_URL + this.DOMAIN + id;
-    try {
-      const res = await req(url, { method: "get" });
-      const json = JSON.parse(res.content);
-
-      if (json.subs) {
-        // Spider class don't have sub method, directly set to result
-        this.result.setSubs([
-          {
-            name: "sub",
-            format: "application/x-subrip",
-            url: this.SUB_URL + json.subs[0],
-          },
-        ]);
-      }
-
-      this.playUrl = json.url;
     } catch (e) {
       Utils.log(e.stack);
     }

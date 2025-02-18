@@ -53,7 +53,7 @@ function startTimeoutCheck() {
 
 export default async function (
   url: string,
-  handler: BaseParser["handleResponse"],
+  parser: BaseParser,
   onSuccess: (data: unknown) => void,
   onFail: (error: string | Error) => void,
 ) {
@@ -61,7 +61,12 @@ export default async function (
   const page: Page = await browser.newPage();
 
   const responseHandler = async (response: HTTPResponse) => {
-    const shouldStop = await handler(response, page, onSuccess, onFail);
+    const shouldStop = await parser.handleResponse(
+      response,
+      page,
+      onSuccess,
+      onFail,
+    );
     if (shouldStop && !page.isClosed()) {
       await page.close().catch((err) => {
         logError(`Closing - ${err.stack || err.message}`);
@@ -84,7 +89,8 @@ export default async function (
     onFail("Timeout");
   }, TIMEOUT_PAGE);
 
-  console.log(`Open new page: ${url}`);
+  console.log(`Open page: ${url} - ${color.notice(parser.constructor.name)}`);
+
   page
     .goto(url, {
       waitUntil: "networkidle2",

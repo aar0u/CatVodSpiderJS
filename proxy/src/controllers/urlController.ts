@@ -27,7 +27,6 @@ export const urlController = {
 
     try {
       const parser: BaseParser = parserFactory.createParser(targetUrl);
-      console.log(`Using handler: ${parser.constructor.name}.handleResponse`);
 
       let isCompleted = false; // 添加状态锁防止多次 resolve
 
@@ -47,7 +46,7 @@ export const urlController = {
         );
       };
 
-      await browser(targetUrl, parser.handleResponse, onSuccess, onFail);
+      await browser(targetUrl, parser, onSuccess, onFail);
     } catch (err) {
       console.error(`Error on urlController: ${err}`);
       res.end(
