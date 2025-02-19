@@ -14,6 +14,7 @@ const routes = {
   "/url/": urlController.handle,
   "/sub/": subController.handle,
   "/json": jsonController.handle,
+  "/": jsonController.handle,
 };
 
 const server = createServer(async (req, res) => {
@@ -38,5 +39,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(config.port, () => {
-  console.log("Server running at http://localhost:3000");
+  console.log(`Server running at http://0.0.0.0:${config.port}`);
 });
