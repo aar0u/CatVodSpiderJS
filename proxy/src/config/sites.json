@@ -1,0 +1,14 @@
+[
+    {
+      "api": "./js/123anime.js",
+      "changeable": 0,
+      "key": "123animehub",
+      "name": "B & C",
+      "searchable": 1,
+      "timeout": 50,
+      "ext": {
+        "box": "TVBox"
+      },
+      "type": 3
+    }
+  ]

@@ -4,8 +4,7 @@ import * as Utils from "../lib/utils.js";
 import { VodDetail } from "../lib/vod.js";
 
 class ABC extends Spider {
-  PROXY_URL = "http://192.168.31.171:3000";
-
+  PROXY_URL = "http://192.168.31.171";
   DOMAIN = "https://123animehub.cc";
 
   async homeContent(filter) {

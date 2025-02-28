@@ -75,7 +75,7 @@ export const jsonController = {
       // 过滤掉 sites 中网盘资源
       const filteredSites = jsonData.sites
         .map((site: { name: string }) => {
-          const ignoreKeywords = ["💓", "盘", "玩偶"];
+          const ignoreKeywords = ["💓", "🎠", "盘", "玩偶", "配置"];
           if (ignoreKeywords.some((keyword) => site.name.includes(keyword))) {
             console.log(
               `${color.muted("Ignored")} site:`,
@@ -87,22 +87,13 @@ export const jsonController = {
         })
         .filter((site) => site !== null);
 
-      const newSite = {
-        api: "./js/123anime.js",
-        changeable: 0,
-        key: "123animehub",
-        name: "B & C",
-        searchable: 1,
-        timeout: 50,
-        ext: {
-          box: "TVBox",
-        },
-        type: 3,
-      };
+      const sitesPath = path.join(__dirname, "../config/sites.json");
+      const sitesData = await fs.readFile(sitesPath, "utf-8");
+      const newSites = JSON.parse(sitesData);
 
       const filteredData = {
         ...jsonData,
-        sites: [newSite, ...filteredSites], // 将 newSite 放在第一个位置
+        sites: [...newSites, ...filteredSites], // 将 newSites 放在第一个位置
       };
 
       res.setHeader("Content-Type", "application/json");
