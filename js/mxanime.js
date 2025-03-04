@@ -262,17 +262,17 @@ class MxAnimeSpider extends Spider {
             var _0x411694 = _0x175e[_0x3abb24];
             if (_0x17f1['nIHPps'] === undefined) {
                 (function () {
-                    var _0x264909 = typeof window !== 'undefined' ? window : typeof process === 'object' && typeof require === 'function' && typeof global === 'object' ? global : this;
+                    // var _0x264909 = typeof window !== 'undefined' ? window : typeof process === 'object' && typeof require === 'function' && typeof global === 'object' ? global : this;
                     var _0x52b78f = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-                    // _0x264909['atob'] || (_0x264909['atob'] = function (_0x202c2d) {
-                    //     var _0x2e97e4 = String(_0x202c2d)['replace'](/=+$/, '');
-                    //     for (var _0x488147 = 0x0,
-                    //             _0x1702c1, _0x5d977a, _0x1a87f9 = 0x0,
-                    //             _0x2378be = ''; _0x5d977a = _0x2e97e4['charAt'](_0x1a87f9++); ~_0x5d977a && (_0x1702c1 = _0x488147 % 0x4 ? _0x1702c1 * 0x40 + _0x5d977a : _0x5d977a, _0x488147++ % 0x4) ? _0x2378be += String['fromCharCode'](0xff & _0x1702c1 >> (-0x2 * _0x488147 & 0x6)) : 0x0) {
-                    //         _0x5d977a = _0x52b78f['indexOf'](_0x5d977a);
-                    //     }
-                    //     return _0x2378be;
-                    // });
+                    globalThis.atob = function (_0x202c2d) {
+                        var _0x2e97e4 = String(_0x202c2d)['replace'](/=+$/, '');
+                        for (var _0x488147 = 0x0,
+                                _0x1702c1, _0x5d977a, _0x1a87f9 = 0x0,
+                                _0x2378be = ''; _0x5d977a = _0x2e97e4['charAt'](_0x1a87f9++); ~_0x5d977a && (_0x1702c1 = _0x488147 % 0x4 ? _0x1702c1 * 0x40 + _0x5d977a : _0x5d977a, _0x488147++ % 0x4) ? _0x2378be += String['fromCharCode'](0xff & _0x1702c1 >> (-0x2 * _0x488147 & 0x6)) : 0x0) {
+                            _0x5d977a = _0x52b78f['indexOf'](_0x5d977a);
+                        }
+                        return _0x2378be;
+                    };
                 }());
                 var _0x5cedb3 = function (_0x19b8a7, _0x9f8a97) {
                     var _0x2b0e6a = [],

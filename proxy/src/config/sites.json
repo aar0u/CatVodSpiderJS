@@ -1,14 +1,23 @@
 [
-    {
-      "api": "./js/123anime.js",
-      "changeable": 0,
-      "key": "123animehub",
-      "name": "B & C",
-      "searchable": 1,
-      "timeout": 50,
-      "ext": {
-        "box": "TVBox"
-      },
-      "type": 3
-    }
-  ]
+  {
+    "api": "./js/123anime.js",
+    "searchable": 1,
+    "changeable": 0,
+    "key": "123animehub",
+    "name": "B & C",
+    "timeout": 50,
+    "ext": {
+      "box": "TVBox"
+    },
+    "type": 3
+  },
+  {
+    "api": "./js/yhdm.js",
+    "searchable": 1,
+    "changeable": 0,
+    "key": "yhdm",
+    "name": "yhdm",
+    "timeout": 50,
+    "type": 3
+  }
+]

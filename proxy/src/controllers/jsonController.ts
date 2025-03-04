@@ -83,7 +83,7 @@ export const jsonController = {
             );
             return null; // 标记为忽略
           }
-          return { ...site, change: 0 }; // 修改 change 为 0
+          return { ...site, changeable: 0 };
         })
         .filter((site) => site !== null);
 

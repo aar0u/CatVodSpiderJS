@@ -1,4 +1,5 @@
-import { __jsEvalReturn } from "../js/123anime.js";
+// import { __jsEvalReturn } from "../js/dubo.js";
+import { __jsEvalReturn } from "../js/yhdm.js";
 import * as Utils from "../lib/utils.js";
 import { Crypto } from "../lib/cat.js";
 
@@ -20,12 +21,20 @@ async function test() {
 
   // await spider.category("/genere/Sports", 2, true, {});
 
-  // await spider.search("one piece");
+  // await spider.search("斗破");
 
   // await spider.detail("/anime/pokemon-2023-dub");
+
+  //"../js/yhdm.js";
+  // await spider.detail("/video/7544.html");
+
+  //"../js/dubo.js";
   // await spider.detail("30786");
 
-  await spider.play("线路1", "/anime/pokemon-2023-dub/episode/005");
+  // "../js/yhdm.js";
+  await spider.play("ABC", "/play/7544-1-1.html")
+  
+  // await spider.play("线路1", "/anime/pokemon-2023-dub/episode/005");
 }
 
 await test();
