@@ -1,6 +1,17 @@
-import { Spider } from "./spider.js";
+/**
+ * YHDM Spider for CatVodSpiderJS
+ * 
+ * Reference documentation:
+ * - Java implementation: https://github.com/FongMi/TV/blob/b67af3c691f1cff410cb692cb7802e31289ac195/quickjs/src/main/java/com/fongmi/quickjs/crawler/Spider.java#L160
+ * - JavaScript libraries: https://github.com/FongMi/TV/blob/release/quickjs/src/main/assets/js/lib/
+ * 
+ * The Spider.java file shows how JavaScript spiders are loaded and executed.
+ * The js/lib directory contains the base Spider class and HTTP utilities.
+ */
+
+import { _ } from "./catvod-assets/js/lib/cat.js";
+import { Spider } from "./core_spider.js";
 import { spider as mxanime } from "./mxanime.js";
-import { _ } from "../lib/cat.js";
 import * as Utils from "../lib/utils.js";
 import { VodDetail } from "../lib/vod.js";
 
@@ -111,8 +122,6 @@ class ABC extends Spider {
         const m3mu8_url =
           "https://danmu.yhdmjx.com/m3u8.php?url=" + playerData.url;
         const m3u8_res = await this.fetch(m3mu8_url, null, this.getHeader());
-
-        Utils.log("11111111 " + m3u8_res);
 
         const m3u8_result = m3u8_res.match(
           /"url": getVideoInfo\("(.*?)"\),/

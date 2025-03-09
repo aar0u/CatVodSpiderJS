@@ -6,9 +6,9 @@
 * @Software : Samples
 * @Desc     : MX动漫
  */
-import {Spider} from "./spider.js";
+import {Spider} from "./core_spider.js";
 import {VodDetail, VodShort} from "../lib/vod.js";
-import {_, load} from "../lib/cat.js";
+import {_, load} from "./catvod-assets/js/lib/cat.js";
 import * as Utils from "../lib/utils.js";
 
 

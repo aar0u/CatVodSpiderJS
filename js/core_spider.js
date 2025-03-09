@@ -10,11 +10,8 @@
 import {JadeLogging} from "../lib/log.js";
 import * as Utils from "../lib/utils.js";
 import {VodDetail, VodShort} from "../lib/vod.js";
-import {_, load, Uri} from "../lib/cat.js";
+import {_, load, Uri} from "./catvod-assets/js/lib/cat.js";
 import * as HLS from "../lib/hls.js";
-import {hlsCache, tsCache} from "../lib/ffm3u8_open.js";
-import {DanmuSpider} from "../lib/danmuSpider.js";
-import { initCloud } from "../lib/cloud.js";
 class Result {
     constructor() {
         this.class = []
@@ -449,10 +446,10 @@ class Spider {
             await this.jadeLog.error("初始化失败,失败原因为:" + e.message)
             return {"token": null, "CatOpenStatus": false, "code": 0}
         }
-
     }
 
     async initCloud(token) {
+        const { initCloud } = await import("../lib/cloud.js");
         await initCloud(token)
     }
 
@@ -460,7 +457,6 @@ class Spider {
     }
 
     async init(cfg) {
-        this.danmuSpider = new DanmuSpider()
         this.cfgObj = await this.SpiderInit(cfg)
         await this.jadeLog.debug(`初始化参数为:${JSON.stringify(cfg)}`)
         this.catOpenStatus = this.cfgObj.CatOpenStatus
@@ -637,7 +633,9 @@ class Spider {
         delete vodDetail.vod_pic;
         await this.jadeLog.debug(`正在加载弹幕,视频详情为:${JSON.stringify(vodDetail)},集数:${JSON.stringify(this.episodeObj[id])}`)
         //区分电影还是电视剧
-        return await this.danmuSpider.getDammu(vodDetail, episodeId)
+        const { DanmuSpider } = await import("../lib/danmuSpider.js");
+        const danmuSpider = new DanmuSpider()
+        return await danmuSpider.getDammu(vodDetail, episodeId)
     }
 
     async play(flag, id, flags) {
@@ -789,7 +787,7 @@ class Spider {
                 }
                 return hlsHeaders;
             }
-
+            const { hlsCache } = await import("../lib/ffm3u8_open.js");
             const hlsData = await hlsCache(url, headers);
             if (hlsData.variants) {
                 // variants -> variants -> .... ignore
@@ -809,6 +807,7 @@ class Spider {
             const info = url.split('/');
             const hlsKey = info[0];
             const segIdx = parseInt(info[1]);
+            const {tsCache} = await import("../lib/ffm3u8_open.js");
             return await tsCache(hlsKey, segIdx, headers);
         } else if (what === "detail") {
             let $ = await this.getHtml(this.siteUrl + url)

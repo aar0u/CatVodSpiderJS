@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import https from 'https';
 import fs from 'node:fs';
 import qs from 'qs';
-import {Uri, _} from '../lib/cat.js';
+import {Uri, _} from '../js/catvod-assets/js/lib/cat.js';
 import tunnel from "tunnel";
 
 const confs = {};

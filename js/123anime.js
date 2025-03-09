@@ -1,5 +1,5 @@
-import { Spider } from "./spider.js";
-import { _ } from "../lib/cat.js";
+import { Spider } from "./core_spider.js";
+import { _ } from "./catvod-assets/js/lib/cat.js";
 import * as Utils from "../lib/utils.js";
 import { VodDetail } from "../lib/vod.js";
 
