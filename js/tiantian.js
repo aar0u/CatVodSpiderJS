@@ -6,8 +6,8 @@
 * @Software : Samples
 * @Desc     : 天天影视
 */
-import {Spider} from "./spider.js";
-import {_} from "../lib/cat.js";
+import {Spider} from "./core_spider.js";
+import { _ } from "./catvod-assets/js/lib/cat.js";
 import * as Utils from "../lib/utils.js";
 import {VodDetail, VodShort} from "../lib/vod.js";
 

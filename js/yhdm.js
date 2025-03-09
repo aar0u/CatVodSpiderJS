@@ -24,14 +24,13 @@ class ABC extends Spider {
     $(selector).each((_, item) => {
       const vod = new VodDetail();
       const $item = $(item);
-      const $a = $item.find("a.stui-vodlist__thumb");
+      const $a = $item.find("a.stui-vodlist__thumb, a.v-thumb");
+      if (!$a.length) return;
       
-      vod.load_data({
-        vod_id: $a.attr("href"),
-        vod_name: $a.attr("title"),
-        vod_pic: $a.attr("data-original"),
-        vod_remarks: $item.find(".pic-text").text().trim(),
-      });
+      vod.vod_id = $a.attr("href");
+      vod.vod_name = $a.attr("title");
+      vod.vod_pic = $a.attr("data-original");
+      vod.vod_remarks = $item.find(".pic-text").text().trim();
       
       vodList.push(vod);
     });
@@ -87,10 +86,10 @@ class ABC extends Spider {
   async searchContent(key, quick) {
     Utils.log(`searchContent params: key=${key}, quick=${quick}`);
 
-    const cheerio = await this.getHtml(
+    const $ = await this.getHtml(
       this.DOMAIN + "/search/-------------.html?wd=" + key
     );
-    this.vodList = this.getVods(cheerio);
+    this.vodList = this.getVodListFromSection($, "ul.stui-vodlist__media li");
 
     const output = this.result.search(this.vodList);
     Utils.log("output: " + output);
@@ -98,46 +97,57 @@ class ABC extends Spider {
   }
 
   async detailContent(ids) {
-    Utils.log(`detailContent params: ids=${ids}`);
+      Utils.log(`detailContent params: ids=${ids}`);
+  
+      try {
+        const $ = await this.getHtml(`${this.DOMAIN}${ids}`);
+  
+        const playFromList = [];
+        const playUrlsList = [];
+        
+        $(".stui-content__playlist").each((sourceIndex, playlist) => {
+          const playUrls = [];
+          const sourceName = $(`.nav-tabs a[href="#playlist${sourceIndex + 1}"]`).text().trim() || `播放源${sourceIndex + 1}`;
+          
+          $(playlist).find("li a").each((_, item) => {
+            const episode = $(item).text().trim();
+            const playUrl = $(item).attr("href");
+            playUrls.push(`${episode}$${playUrl}`);
+          });
+          
+          playFromList.push(`${sourceName}$$$`);
+          playUrlsList.push(playUrls.join("#") + "$$$");
+        });
+  
+        const vodDetail = new VodDetail();
+        vodDetail.vod_id = ids[0];
+        vodDetail.vod_pic = $(".stui-vodlist__thumb img").attr("data-original");
 
-    const url = `${this.DOMAIN}${ids}`;
-
-    try {
-      const $ = await this.getHtml(`${this.DOMAIN}${ids}`);
-
-      const playUrls = [];
-      $(".stui-content__playlist li a").each((_, item) => {
-        const episode = $(item).text().trim(); // 如 "第01集", "总集篇上"
-        const playUrl = $(item).attr("href"); // 如 "/play/7544-2-1.html"
-        playUrls.push(`${episode}$${playUrl}`);
-      });
-
-      // 构建播放URL
-      const playUrl = playUrls.join("#") + "$$$";
-
-      // 提取视频详情
-      const vodDetail = new VodDetail();
-      vodDetail.load_data({
-        vod_id: ids[0],
-        vod_name: $(".stui-content__detail h1.title")
+        const $detail = $(".stui-content__detail");
+        vodDetail.vod_name = $detail.find("h1.title")
           .text()
-          .trim()
-          .replace(/\s*在线观看.*/, ""), // 移除 "在线观看" 和评分
-        vod_pic: $(".stui-vodlist__thumb img").attr("data-original"),
-        vod_remarks: $(".stui-content__detail .desc")
-          .text()
-          .trim() // 移除首尾空白
-          .replace(/简介：/, "") // 移除 "简介："
-          .replace(/\t/g, "") // 移除所有 \t
-          .replace(/详情.*/, ""), // 移除 "详情" 及其后的内容
-        vod_play_from: `${this.constructor.name}$$$`,
-        vod_play_url: playUrl,
-      });
+          .replace(/\s*在线观看.*|\s+/g, "");
 
-      this.vodDetail = vodDetail;
-    } catch (e) {
-      Utils.log(e.stack);
-    }
+        vodDetail.type_name = $detail.find("span:contains('类型')").nextUntil('.split-line')
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .join(' ');
+        vodDetail.vod_area = $detail.find("span:contains('地区')").next().text().trim();
+        vodDetail.vod_year = $detail.find("span:contains('年份')").next().text().trim();
+        vodDetail.vod_actor = $detail.find("span:contains('主演')").parent().text().trim();
+        vodDetail.vod_director = $detail.find("span:contains('导演')").text().trim() || 
+                                $detail.find("span:contains('别名')").parent().text().trim();
+
+        vodDetail.vod_content = $detail.find(".desc")
+          .text()
+          .replace(/(?:简介：|\t|详情.*|\s+)/g, "");
+        vodDetail.vod_play_from = playFromList.join("");
+        vodDetail.vod_play_url = playUrlsList.join("");
+  
+        this.vodDetail = vodDetail;
+      } catch (e) {
+        Utils.log(e.stack);
+      }
 
     const output = this.result.detail(this.vodDetail);
     Utils.log("output: " + output);
@@ -191,29 +201,6 @@ class ABC extends Spider {
       Utils.log(e.stack);
     }
     return this.result.play("");
-  }
-
-  getVods($) {
-    const vods = [];
-
-    // 使用 Cheerio 的方法遍历
-    $("ul.stui-vodlist__media li").each((_, item) => {
-      const a = $(item).find("a.v-thumb");
-      if (!a.length) return;
-
-      const title = a.attr("title") || "";
-      const pic = a.attr("data-original") || "";
-      const remarks = $(item).find(".pic-text").text().trim() || "";
-
-      vods.push({
-        vod_id: a.attr("href"),
-        vod_name: title,
-        vod_pic: pic,
-        vod_remarks: remarks,
-      });
-    });
-
-    return vods;
   }
 }
 
