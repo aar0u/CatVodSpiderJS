@@ -17,23 +17,19 @@ async function test() {
 
   Utils.log("Test started");
 
-  // await spider.home(true);
-
-  // await spider.category("/genere/Sports", 2, true, {});
-
-  // await spider.search("斗破");
-
-  // await spider.detail("/anime/pokemon-2023-dub");
+  await spider.home(true);
 
   //"../js/yhdm.js";
+  // await spider.search("斗破");
   // await spider.detail("/video/7544.html");
-
+  // await spider.play("ABC", "/play/7544-1-22.html")
+  
   //"../js/dubo.js";
   // await spider.detail("30786");
 
-  // "../js/yhdm.js";
-  await spider.play("ABC", "/play/7544-1-22.html")
-  
+  //"../js/123anime.js";
+  // await spider.category("/genere/Sports", 2, true, {});
+  // await spider.detail("/anime/pokemon-2023-dub");
   // await spider.play("线路1", "/anime/pokemon-2023-dub/episode/005");
 }
 

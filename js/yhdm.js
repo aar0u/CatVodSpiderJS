@@ -1,5 +1,5 @@
 /**
- * YHDM Spider for CatVodSpiderJS
+ * YHDM Spider for CatVod/FongmiTV
  * 
  * Reference documentation:
  * - Java implementation: https://github.com/FongMi/TV/blob/b67af3c691f1cff410cb692cb7802e31289ac195/quickjs/src/main/java/com/fongmi/quickjs/crawler/Spider.java#L160
@@ -17,19 +17,56 @@ import { VodDetail } from "../lib/vod.js";
 
 class ABC extends Spider {
   DOMAIN = "https://www.dmla7.com";
+  categoryVodLists = new Map(); // 添加缓存Map
+
+  getVodListFromSection($, selector) {
+    const vodList = [];
+    $(selector).each((_, item) => {
+      const vod = new VodDetail();
+      const $item = $(item);
+      const $a = $item.find("a.stui-vodlist__thumb");
+      
+      vod.load_data({
+        vod_id: $a.attr("href"),
+        vod_name: $a.attr("title"),
+        vod_pic: $a.attr("data-original"),
+        vod_remarks: $item.find(".pic-text").text().trim(),
+      });
+      
+      vodList.push(vod);
+    });
+    return vodList;
+  }
 
   async homeContent(filter) {
     Utils.log("homeContent params: filter=" + filter);
     this.classes = [];
-    const vod1 = new VodDetail();
-    vod1.load_data({
-      vod_id: "/video/7544.html",
-      vod_name: "斗破苍穹年番",
-      vod_pic:
-        "https://images.weserv.nl/?url=https://lz.sinaimg.cn/large/006sgDP3gy1h3h22896cgj307i0ai74u.jpg",
-      vod_remarks: "",
+
+    const $ = await this.getHtml(this.DOMAIN);
+
+    // 收集分类，只要"最新"开头的分类
+    $(".stui-pannel-box h3").each((_, el) => {
+      const title = $(el).text().trim();
+      if (title.startsWith('最新')) {
+        Utils.log("Found category: " + title);
+        const $section = $(el).closest('.stui-pannel-box');
+        const vodList = this.getVodListFromSection($, $section.find(".stui-vodlist__box"));
+        // 缓存该分类下的视频列表
+        this.categoryVodLists.set(title, vodList);
+        Utils.log(`Cached ${vodList.length} items for category: ${title}`);
+
+        this.classes.push({
+          type_id: title,
+          type_name: title
+        });
+      }
     });
-    this.vodList = [vod1];
+    Utils.log(`Added ${this.classes.length} categories`);
+
+    const $hotSection = $(".stui-pannel:contains('热门动漫推荐')");
+    this.vodList = this.getVodListFromSection($, $hotSection.find(".stui-vodlist li"));
+    Utils.log(`Items in hot section: ${this.vodList.length}`);
+
     this.filterObj = {};
 
     const output = this.result.home(this.classes, this.vodList, this.filterObj);
@@ -38,11 +75,13 @@ class ABC extends Spider {
   }
 
   async categoryContent(tid, pg, filter, extend) {
-    Utils.log(
-      `categoryContent params: tid=${tid}, pg=${pg}, filter=${filter}, extend=${extend}
-      }`
-    );
-    return this.result.category([], tid, pg, filter, extend);
+    Utils.log(`categoryContent params: tid=${tid}, pg=${pg}, filter=${filter}, extend=${extend}`);
+
+    // 从缓存中获取分类视频列表
+    const vodList = this.categoryVodLists.get(tid) || [];
+    Utils.log(`Found ${vodList.length} cached items for category: ${tid}`);
+
+    return this.result.category(vodList, tid, pg, filter, extend);
   }
 
   async searchContent(key, quick) {
