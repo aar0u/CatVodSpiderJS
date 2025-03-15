@@ -7,7 +7,7 @@
       "request": "launch",
       "skipFiles": ["<node_internals>/**"],
       "type": "node",
-      "console": "integratedTerminal"
+      // "console": "integratedTerminal"
     },
     {
       "name": "npm dev",
