@@ -74,14 +74,20 @@ export const jsonController = {
 
       // 过滤掉 sites 中网盘资源
       const filteredSites = jsonData.sites
-        .map((site: { name: string }) => {
+        .map((site: { key: string; name: string }) => {
           const ignoreKeywords = ["💓", "🎠", "盘", "玩偶", "配置"];
-          if (ignoreKeywords.some((keyword) => site.name.includes(keyword))) {
+          const keepKeys = ["baidu", "Wexokconfig"];
+          if (!keepKeys.includes(site.key) && 
+              ignoreKeywords.some((keyword) => site.name.includes(keyword))) {
             console.log(
               `${color.muted("Ignored")} site:`,
               JSON.stringify(site),
             );
             return null; // 标记为忽略
+          }
+          const specialApis = ["WexkuihuatvGuard", "Wexwencai"];
+          if (specialApis.includes(site.key || "")) {
+            return { ...site, changeable: 1 };
           }
           return { ...site, changeable: 0 };
         })
