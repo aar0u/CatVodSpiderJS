@@ -72,26 +72,32 @@ export const jsonController = {
         jsonData = response.data;
       }
 
-      // 过滤掉 sites 中网盘资源
+      // 过滤 sites
+      const ignoreKeywords = ["💓", "🎠", "盘", "玩偶", "配置"];
+      const keepKeys = ["baidu", "Wexokconfig"];
+      const priorityKeys = ["WexkuihuatvGuard", "Wexwencai", "baidu"];
+
       const filteredSites = jsonData.sites
         .map((site: { key: string; name: string }) => {
-          const ignoreKeywords = ["💓", "🎠", "盘", "玩偶", "配置"];
-          const keepKeys = ["baidu", "Wexokconfig"];
-          if (!keepKeys.includes(site.key) && 
-              ignoreKeywords.some((keyword) => site.name.includes(keyword))) {
+          if (
+            !new Set([...keepKeys, ...priorityKeys]).has(site.key) &&
+            ignoreKeywords.some((keyword) => site.name.includes(keyword))
+          ) {
             console.log(
               `${color.muted("Ignored")} site:`,
               JSON.stringify(site),
             );
             return null; // 标记为忽略
           }
-          const specialApis = ["WexkuihuatvGuard", "Wexwencai"];
-          if (specialApis.includes(site.key || "")) {
-            return { ...site, changeable: 1 };
-          }
-          return { ...site, changeable: 0 };
+          const changeable = priorityKeys.includes(site.key) ? 1 : 0;
+          return {
+            ...site,
+            originalChangeable: site["changeable"],
+            changeable,
+          };
         })
-        .filter((site) => site !== null);
+        .filter((site) => site !== null)
+        .sort((a, b) => b.changeable - a.changeable);
 
       const sitesPath = path.join(__dirname, "../config/sites.json");
       const sitesData = await fs.readFile(sitesPath, "utf-8");
