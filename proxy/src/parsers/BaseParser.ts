@@ -1,10 +1,7 @@
 import { HTTPResponse, Page } from "puppeteer";
 
-import { Vod } from "../models/Vod";
-
 export interface BaseParser {
-  parse(html: string): { vod: Vod; episodes: string[] };
-  beforeHandleResponse(page);
+  beforeHandleResponse(page, selector: string);
   handleResponse(
     response: HTTPResponse,
     page: Page,

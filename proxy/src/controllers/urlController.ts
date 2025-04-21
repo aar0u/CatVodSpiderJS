@@ -8,7 +8,11 @@ import { color, getOrigin, normalizeUrl } from "../utils";
 
 export const urlController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
-    const fullPath = new URL(req.url, getOrigin(req)).pathname;
+    const url = new URL(req.url, getOrigin(req));
+    const selector = url.searchParams.get("flag");
+    // Remove flag parameter from search string if it exists
+    url.searchParams.delete("flag");
+    const fullPath = url.pathname + url.search;
     const targetUrl = decodeURIComponent(fullPath.split("/url/")[1]);
 
     res.setHeader("Content-Type", "application/json");
@@ -46,7 +50,7 @@ export const urlController = {
         );
       };
 
-      await browser(targetUrl, parser, onSuccess, onFail);
+      await browser(targetUrl, selector, parser, onSuccess, onFail);
     } catch (err) {
       console.error(`Error on urlController: ${err}`);
       res.end(

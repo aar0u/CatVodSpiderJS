@@ -1,0 +1,1 @@
+curl http://192.168.31.171/sub/fetch?name=pokemon-2023-dub\&upto=68
