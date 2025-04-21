@@ -1,5 +1,5 @@
 import { Spider } from "./core_spider.js";
-import { _ } from "./catvod-assets/js/lib/cat.js";
+import { _, load } from "./catvod-assets/js/lib/cat.js";
 import * as Utils from "../lib/utils.js";
 import { VodDetail } from "../lib/vod.js";
 
@@ -27,44 +27,115 @@ class ABC extends Spider {
 
   async detailContent(ids) {
     Utils.log(`detailContent params: ids=${ids}`);
-    return super.detail(ids[0]);
-  }
 
-  async playerContent(flag, id, vipFlags) {
-    Utils.log(
-      `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}`
-    );
-    Utils.log(`#### setPlay called from super.play`);
-    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${id}`;
+    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}`;
     try {
       const res = await req(url, { method: "get", timeout: 25000 });
       const json = JSON.parse(res.content);
+      const $ = load(json.html);
 
-      if (json.subs) {
-        const subId = json.subs[0];
-        const ext = subId.split(".").pop().toLowerCase();
+      const vodDetail = new VodDetail();
+      vodDetail.vod_id = ids[0];
 
-        const subFormat = (() => {
-          switch (ext) {
-            case "vtt":
-              return "text/vtt";
-            case "ass":
-            case "ssa":
-              return "text/x-ssa";
-            default:
-              return "application/x-subrip";
-          }
-        })();
+      // Get poster image from meta tag
+      const ogImage = $('meta[property="og:image"]').attr("content");
+      vodDetail.vod_pic = ogImage || "";
 
-        // Spider class don't have sub method, directly set to result
-        this.result.setSubs([
-          {
-            name: "sub",
-            format: subFormat,
-            url: this.PROXY_URL + subId,
-          },
-        ]);
+      // Get description
+      const desc = $("div.desc").first();
+      if (desc.length > 0) {
+        vodDetail.vod_content = desc
+          .text()
+          .replace(/\t/g, " ")
+          .replace(/\s{2,}/g, " ")
+          .replace(/More$/, "")
+          .trim();
       }
+
+      // Process metadata
+      const metaItems = $("dl.meta > dt");
+      metaItems.each((_, dt) => {
+        const key = $(dt).text().replace(":", "").trim();
+        const dd = $(dt).next();
+
+        if (dd.length > 0 && dd.prop("tagName") === "DD") {
+          let value = dd
+            .find("a")
+            .map((_, a) => $(a).text())
+            .get()
+            .join(", ");
+
+          if (!value) {
+            value = dd.text().trim();
+          }
+
+          switch (key) {
+            case "Type":
+              vodDetail.type_name = value;
+              break;
+            case "Country":
+              vodDetail.vod_area = value;
+              break;
+            case "Released":
+              vodDetail.vod_year = value;
+              break;
+            case "Status":
+              vodDetail.vod_remarks = value;
+              break;
+            case "Genre":
+              vodDetail.vod_tag = value;
+              break;
+          }
+        }
+      });
+
+      const playFromList = [];
+      const playUrlsList = [];
+
+      const episodes = [];
+      $(".episodes.range a[data-base]").each((_, ep) => {
+        const $ep = $(ep);
+        const epNumber = $ep.attr("data-base");
+        const epUrl = $ep.attr("href");
+        if (epUrl) {
+          episodes.push(`${epNumber}$${epUrl}`);
+        }
+      });
+
+      playFromList.push("Default$$$");
+      playUrlsList.push(episodes.join("#") + "$$$");
+
+      vodDetail.vod_play_from = playFromList.join("");
+      vodDetail.vod_play_url = playUrlsList.join("");
+
+      this.vodDetail = vodDetail;
+    } catch (e) {
+      Utils.log(`Error in detailContent: ${e.stack}`);
+    }
+
+    const output = this.result.detail(this.vodDetail);
+    Utils.log(`output: ${output}`);
+    return output;
+  }
+
+  async playerContent(flag, id, vipFlags) {
+    const matches = id.match(/\/anime\/(.*?)\/episode\/(\d+)/);
+    const animeName = matches ? matches[1] : "";
+    const episodeNumber = matches ? matches[2] : "";
+    Utils.log(
+      `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}, parsed: anime=${animeName}, episode=${episodeNumber}`
+    );
+    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${id}?flag=span.tip.tab[data-name="10"]`;
+    try {
+      const res = await req(url, { method: "get", timeout: 25000 });
+      const json = JSON.parse(res.content);
+      this.result.setSubs([
+        {
+          name: "sub",
+          format: "application/x-subrip",
+          url: `${this.PROXY_URL}/sub/${animeName}-${episodeNumber}.srt`,
+        },
+      ]);
       let headers = this.getHeader();
       headers["Referer"] = "https://play.bunnycdn.to/";
       this.result.header = headers;
@@ -107,35 +178,6 @@ class ABC extends Spider {
   async setSearch(key, quick, pg) {
     const cheerio = await this.getHtml(this.DOMAIN + "/search?keyword=" + key);
     this.vodList = this.getVods(cheerio);
-  }
-
-  async setDetail(showName) {
-    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${showName}`;
-
-    try {
-      const res = await req(url, { method: "get", timeout: 25000 });
-      const json = JSON.parse(res.content);
-
-      const episodes = json.episodes;
-      const total = episodes.length;
-      let playUrl = "";
-
-      for (let i = 0; i < total; i++) {
-        const episode = episodes[i];
-        playUrl += `${episode}$${showName}/episode/${episode}`;
-        playUrl += i < total - 1 ? "#" : "$$$";
-      }
-
-      json.vod.vod_play_from = `${this.constructor.name}$$$`;
-      json.vod.vod_play_url = playUrl;
-
-      let vodDetail = new VodDetail();
-      vodDetail.load_data(json.vod);
-
-      this.vodDetail = vodDetail;
-    } catch (e) {
-      Utils.log(e.stack);
-    }
   }
 
   getVods($) {

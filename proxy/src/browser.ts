@@ -14,7 +14,7 @@ const TIMEOUT_PAGE = 2 * MIN;
 async function getBrowser() {
   if (!browserInstance || !browserInstance.connected) {
     browserInstance = await puppeteer.launch({
-      // headless: false,
+      headless: false,
       defaultViewport: null,
       args: [
         "--disable-blink-features=AutomationControlled",
@@ -53,6 +53,7 @@ function startTimeoutCheck() {
 
 export default async function (
   url: string,
+  selector: string,
   parser: BaseParser,
   onSuccess: (data: unknown) => void,
   onFail: (error: string | Error) => void,
@@ -71,7 +72,7 @@ export default async function (
       onFail(err.message);
     });
 
-  await parser.beforeHandleResponse(page);
+  await parser.beforeHandleResponse(page, selector);
 
   const responseHandler = async (response: HTTPResponse) => {
     const shouldStop = await parser.handleResponse(

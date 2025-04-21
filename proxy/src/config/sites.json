@@ -12,6 +12,18 @@
     "type": 3
   },
   {
+    "api": "./js/9anime.js",
+    "searchable": 1,
+    "changeable": 0,
+    "key": "9anime",
+    "name": "🥇9anime🥇",
+    "timeout": 50,
+    "ext": {
+      "box": "TVBox"
+    },
+    "type": 3
+  },
+  {
     "api": "./js/yhdm.js",
     "searchable": 1,
     "changeable": 0,
