@@ -2,7 +2,7 @@ import { BaseParser } from "./BaseParser";
 import { Playable } from "../models/Playable";
 import { color, logError } from "../utils";
 
-export class Parser123Anime implements BaseParser {
+export class DefaultParser implements BaseParser {
   private playable = new Playable();
   private isProcessing = false;
 

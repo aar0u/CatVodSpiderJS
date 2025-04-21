@@ -1,12 +1,12 @@
 import { BaseParser } from "./BaseParser";
-import { Parser123Anime } from "./Parser123Anime";
+import { DefaultParser } from "./DefaultParser";
 
 export const parserFactory = {
   createParser(url: string): BaseParser {
     if (url.includes("123anime")) {
-      return new Parser123Anime();
+      return new DefaultParser();
     } else if (url.includes("9anime")) {
-      return new Parser123Anime();
+      return new DefaultParser();
     }
     throw new Error("Unsupported parser type");
   },
