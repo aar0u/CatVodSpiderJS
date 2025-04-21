@@ -65,7 +65,9 @@ class ABC extends Spider {
           },
         ]);
       }
-
+      let headers = this.getHeader();
+      headers["Referer"] = "https://play.bunnycdn.to/";
+      this.result.header = headers;
       return this.result.play(json.url);
     } catch (e) {
       Utils.log(e.stack);

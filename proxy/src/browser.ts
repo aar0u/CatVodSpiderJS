@@ -60,6 +60,19 @@ export default async function (
   const browser = await getBrowser();
   const page: Page = await browser.newPage();
 
+  console.log(`Open page: ${url} - ${color.notice(parser.constructor.name)}`);
+  page
+    .goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 60000,
+    })
+    .catch((err) => {
+      logError(`Browser - ${err.stack || err.message}`);
+      onFail(err.message);
+    });
+
+  await parser.beforeHandleResponse(page);
+
   const responseHandler = async (response: HTTPResponse) => {
     const shouldStop = await parser.handleResponse(
       response,
@@ -69,7 +82,7 @@ export default async function (
     );
     if (shouldStop && !page.isClosed()) {
       await page.close().catch((err) => {
-        logError(`Closing - ${err.stack || err.message}`);
+        logError(`Closing - ${err.message}`);
       });
     }
   };
@@ -88,16 +101,4 @@ export default async function (
     }
     onFail("Timeout");
   }, TIMEOUT_PAGE);
-
-  console.log(`Open page: ${url} - ${color.notice(parser.constructor.name)}`);
-
-  page
-    .goto(url, {
-      waitUntil: "networkidle2",
-      timeout: 60000,
-    })
-    .catch((err) => {
-      logError(`Browser - ${err.stack || err.message}`);
-      onFail(err.message);
-    });
 }
