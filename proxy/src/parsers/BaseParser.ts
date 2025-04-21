@@ -4,6 +4,7 @@ import { Vod } from "../models/Vod";
 
 export interface BaseParser {
   parse(html: string): { vod: Vod; episodes: string[] };
+  beforeHandleResponse(page);
   handleResponse(
     response: HTTPResponse,
     page: Page,

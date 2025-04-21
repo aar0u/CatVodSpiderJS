@@ -22,6 +22,18 @@ export class Parser123Anime implements BaseParser {
     this.handleResponse = this.handleResponse.bind(this);
   }
 
+  async beforeHandleResponse(page) {
+    const svrTab = 'span.tip.tab[data-name="10"]';
+    // const svrTab = 'div.server-item[data-server-id="4"] a'; //for 9anime
+    try {
+      await page.waitForSelector(svrTab, { timeout: 5000 });
+      await page.click(svrTab);
+      console.log("Clicked on server tab");
+    } catch (err) {
+      logError(`Failed to click ${svrTab} - ${err.message}`);
+    }
+  }
+
   async handleResponse(response, page, onSuccess, onFail) {
     try {
       const url = response.url().toLowerCase();
@@ -55,14 +67,17 @@ export class Parser123Anime implements BaseParser {
         this.playable.episodes = episodes;
 
         // details to be updated when accessing episode
-        const detailPage = page.url().replace(/\/episode\/\d+\/?$/, "");
+        const detailPage = normalizeUrl(
+          page.url().replace(/\/episode\/\d+\/?$/, ""),
+        );
         const { url, ...playableWithoutUrl } = this.playable;
         void url;
         if (detailPage === page.url()) {
           setCache(detailPage + "/episode/001", this.playable, CACHE_TTL);
           setCache(detailPage, playableWithoutUrl);
         } else {
-          setCache(normalizeUrl(page.url()), this.playable, CACHE_TTL);
+          // Don't cache play page
+          // setCache(normalizeUrl(page.url()), this.playable, CACHE_TTL);
           setCache(detailPage, playableWithoutUrl);
         }
 

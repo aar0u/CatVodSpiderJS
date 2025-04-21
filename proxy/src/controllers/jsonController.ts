@@ -74,7 +74,7 @@ export const jsonController = {
 
       // 过滤 sites
       const ignoreKeywords = ["💓", "🎠", "盘", "玩偶", "配置"];
-      const keepKeys = ["baidu", "Wexokconfig"];
+      const keepKeys = ["baidu", "Wexconfig"];
       const priorityKeys = ["WexkuihuatvGuard", "Wexwencai", "baidu"];
 
       const filteredSites = jsonData.sites
