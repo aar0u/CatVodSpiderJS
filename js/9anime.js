@@ -1,34 +1,69 @@
 import { Spider } from "./core_spider.js";
 import { _, load } from "./catvod-assets/js/lib/cat.js";
-import * as Utils from "../lib/utils.js";
 import { VodDetail } from "../lib/vod.js";
+import * as Utils from "../lib/utils.js";
+
+import { JadeLogging } from "../lib/log.js";
+const jadeLog = new JadeLogging(Utils.getCurrentFileName(), "DEBUG");
 
 class ABC extends Spider {
   PROXY_URL = "http://192.168.31.171";
   DOMAIN = "https://9animetv.to";
 
   async homeContent(filter) {
-    Utils.log("homeContent params: filter=" + filter);
+    jadeLog.info("homeContent params: filter=" + filter);
 
-    const $ = await this.getHtml(this.DOMAIN + "/home");
-    this.vodList = this.getVodListFromSection($, ".flw-item");
+    this.classes = [{ type_id: "/home", type_name: "首页" }];
 
-    this.filterObj = {};
-    const output = this.result.home(this.classes, this.vodList, this.filterObj);
-    Utils.log(`output: ${output}`);
+    this.filterObj = {
+      "/home": [
+        {
+          key: "language",
+          name: "配音",
+          value: [
+            { n: "配音版", v: "dub" },
+            { n: "字幕版", v: "sub" },
+          ],
+        },
+        {
+          key: "year",
+          name: "年份",
+          value: Array.from({ length: 25 }, (_, i) => {
+            const year = 2025 - i;
+            return { n: year.toString(), v: year.toString() };
+          }),
+        },
+      ],
+    };
+
+    const output = this.result.home(this.classes, [], this.filterObj);
+    jadeLog.info(`output: ${output}`);
     return output;
   }
 
   async categoryContent(tid, pg, filter, extend) {
-    Utils.log(
-      `categoryContent params: tid=${tid}, pg=${pg}, filter=${filter}, extend=${extend}
-      }`
+    jadeLog.info(
+      `categoryContent params: tid=${tid}, pg=${pg}, filter=${filter}, extend=${JSON.stringify(
+        extend
+      )}`
     );
-    return super.category(tid, pg, filter, extend);
+
+    // Determine URL based on whether filters are present
+    const url =
+      Object.keys(extend).length === 0
+        ? this.DOMAIN + tid
+        : `${this.DOMAIN}/filter?${Object.entries(extend)
+            .map(([key, value]) => `${key}=${value}`)
+            .join("&")}`;
+
+    let $ = await this.getHtml(url);
+    const vodList = this.getVodListFromSection($, ".flw-item");
+    jadeLog.info(`Fetching URL: ${url}, ${vodList.length} items for category: ${tid}`);
+    return this.result.category(vodList, pg, 1, 0);
   }
 
   async searchContent(key, quick) {
-    Utils.log(`searchContent params: key=${key}, quick=${quick}`);
+    jadeLog.info(`searchContent params: key=${key}, quick=${quick}`);
 
     const $ = await this.getHtml(
       this.DOMAIN + "/search?keyword=" + encodeURIComponent(key)
@@ -36,18 +71,18 @@ class ABC extends Spider {
     this.vodList = this.getVodListFromSection($, ".flw-item");
 
     const output = this.result.search(this.vodList);
-    Utils.log(`output: ${output}`);
+    jadeLog.info(`output: ${output}`);
     return output;
   }
 
   async detailContent(ids) {
-    Utils.log(`detailContent params: ids=${ids}`);
+    jadeLog.info(`detailContent params: ids=${ids}`);
 
     try {
       // const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}?flag=${encodeURIComponent('.servers-dub .server-item:first-child')}`;
       const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}`;
 
-      const res = await req(url, { method: "get", timeout: 25000 });
+      const res = await req(url, { method: "get", timeout: 15000 });
       const json = JSON.parse(res.content);
       const $ = load(json.html);
 
@@ -117,7 +152,7 @@ class ABC extends Spider {
           : serverName;
 
         const serverId = $server.attr("data-id");
-        Utils.log(`Found server: ${fullServerName} with ID: ${serverId}`);
+        jadeLog.info(`Found server: ${fullServerName} with ID: ${serverId}`);
 
         const episodes = [];
         $(`.episodes-ul a.ep-item`).each((_, ep) => {
@@ -132,7 +167,7 @@ class ABC extends Spider {
 
         playFromList.push(`${fullServerName}$$$`);
         playUrlsList.push(episodes.join("#") + "$$$");
-        Utils.log(
+        jadeLog.info(
           `Added server: ${fullServerName} with ${episodes.length} episodes`
         );
       });
@@ -142,21 +177,28 @@ class ABC extends Spider {
 
       this.vodDetail = vodDetail;
     } catch (e) {
-      Utils.log(`Error in detailContent: ${e.stack}`);
+      jadeLog.info(
+        `Error in detailContent: ${
+          e instanceof SyntaxError ? "Invalid JSON response" : e.message
+        }`
+      );
+      return "";
     }
 
     const output = this.result.detail(this.vodDetail);
-    Utils.log(`output: ${output}`);
+    jadeLog.info(`output: ${output}`);
     return output;
   }
 
   async playerContent(flag, id, vipFlags) {
-    Utils.log(
+    jadeLog.info(
       `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}`
     );
-    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${id}&flag=${encodeURIComponent('.servers-dub .server-item:first-child')}`;
+    const url = `${this.PROXY_URL}/url/${
+      this.DOMAIN
+    }${id}&flag=${encodeURIComponent(".servers-dub .server-item:first-child")}`;
     try {
-      const res = await req(url, { method: "get", timeout: 25000 });
+      const res = await req(url, { method: "get", timeout: 15000 });
       const json = JSON.parse(res.content);
 
       if (json.subs) {
@@ -175,7 +217,6 @@ class ABC extends Spider {
           }
         })();
 
-        // Spider class don't have sub method, directly set to result
         this.result.setSubs([
           {
             name: "sub",
@@ -189,10 +230,10 @@ class ABC extends Spider {
       this.result.header = headers;
 
       const output = this.result.play(json.url);
-      Utils.log(`output: ${output}`);
+      jadeLog.info(`output: ${output}`);
       return output;
     } catch (e) {
-      Utils.log(e.stack);
+      jadeLog.info(e.stack);
     }
     return this.result.play("");
   }
@@ -212,7 +253,7 @@ class ABC extends Spider {
         const $titleLink = $filmDetail.find(".film-name a");
 
         if (!$titleLink.length) {
-          Utils.log("No title link found, skipping item");
+          jadeLog.info("No title link found, skipping item");
           return;
         }
 
@@ -234,10 +275,9 @@ class ABC extends Spider {
 
         if (vod.vod_id && vod.vod_name) {
           vodList.push(vod);
-          Utils.log(`Added: ${vod.vod_name} (${vod.vod_id})`);
         }
       } catch (e) {
-        Utils.log(`Error parsing item: ${e.message}`);
+        jadeLog.info(`Error parsing item: ${e.message}`);
       }
     });
     return vodList;

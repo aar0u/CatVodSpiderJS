@@ -17,10 +17,6 @@ export const fileController = (baseDir: string) => {
         const method = req.method || "GET";
         const userAgent = req.headers["user-agent"] || "unknown";
 
-        console.log(
-          `${color.success(method)} ${color.info(req.url || "/")} "${color.notice(userAgent)}"`,
-        );
-
         const url = new URL(req.url || "", getOrigin(req));
         const baseDirName = path.basename(path.resolve(baseDir));
         const relativePath = url.pathname.replace(
@@ -28,6 +24,12 @@ export const fileController = (baseDir: string) => {
           "",
         );
         const filePath = path.join(__dirname, baseDir, relativePath);
+
+        console.log(
+          `${color.success(method)} ${color.info(req.url || "/")} "${color.notice(userAgent)}" ${
+            fs.existsSync(filePath) ? color.success("✓") : color.danger("✗")
+          }`,
+        );
 
         // 检查文件是否存在
         if (!fs.existsSync(filePath)) {
