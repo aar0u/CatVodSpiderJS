@@ -6,9 +6,7 @@
     "key": "123animehub",
     "name": "🥇123anime🥇",
     "timeout": 50,
-    "ext": {
-      "box": "TVBox"
-    },
+    "ext": {},
     "type": 3
   },
   {
@@ -18,9 +16,7 @@
     "key": "9anime",
     "name": "🥇9anime🥇",
     "timeout": 50,
-    "ext": {
-      "box": "TVBox"
-    },
+    "ext": {},
     "type": 3
   },
   {
@@ -30,6 +26,7 @@
     "key": "yhdm",
     "name": "🥇yhdm🥇",
     "timeout": 50,
-    "type": 3
+    "type": 3,
+    "ext": {}
   }
 ]
