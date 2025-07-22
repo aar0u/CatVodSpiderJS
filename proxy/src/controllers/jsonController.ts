@@ -48,6 +48,21 @@ function verifyAndDecrypt(data: string): string {
 
 export const jsonController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
+    // Log request details
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      let logMsg = "[jsonController] Incoming request:\n";
+      logMsg += `  Method: ${req.method}\n`;
+      logMsg += `  URL: ${req.url}\n`;
+      logMsg += `  Headers: ${JSON.stringify(req.headers, null, 2)}\n`;
+      if (body) {
+        logMsg += `  Body: ${body}\n`;
+      }
+      console.log(logMsg);
+    });
     try {
       const host = getOrigin(req);
       const url = new URL(req.url || "", host);
