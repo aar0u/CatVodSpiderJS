@@ -1,3 +1,5 @@
+
+import "./logger";
 import { createServer } from "http";
 
 import { config } from "./config/config";
