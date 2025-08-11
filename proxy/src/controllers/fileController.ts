@@ -38,15 +38,15 @@ export const fileController = (baseDir: string) => {
           return;
         }
 
-        // 读取文件内容
-        const fileContent = fs.readFileSync(filePath);
-
-        // 动态设置 Content-Type
+        // 使用流式读取和返回文件内容，提升性能
         const contentType = mime.lookup(filePath) || "application/octet-stream";
         res.setHeader("Content-Type", contentType);
-
-        // 返回文件内容
-        res.end(fileContent);
+        const stream = fs.createReadStream(filePath);
+        stream.on("error", (err) => {
+          res.statusCode = 500;
+          res.end("File read error");
+        });
+        stream.pipe(res);
       } catch (error) {
         res.statusCode = 500;
         res.end(

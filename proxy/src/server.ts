@@ -10,6 +10,7 @@ import { urlController } from "./controllers/urlController";
 import { getOrigin } from "./utils";
 
 const routes = {
+  "/static/": fileController("../../static").handle,
   "/js/": fileController("../../../js").handle,
   "/lib/": fileController("../../../lib").handle,
   "/json/": fileController("../../../json").handle,
