@@ -1,4 +1,3 @@
-
 import "./logger";
 import { createServer } from "http";
 
@@ -10,13 +9,13 @@ import { urlController } from "./controllers/urlController";
 import { getOrigin } from "./utils";
 
 const routes = {
-   "/js/*": fileController("../../../js").handle,
-   "/lib/*": fileController("../../../lib").handle,
-   "/json/*": fileController("../../../json").handle,
-   "/url/*": urlController.handle,
-   "/sub/fetch*": subController.fetch,
-   "/sub/*": subController.handle,
-   "/": jsonController.handle,
+  "/js/*": fileController("../../../js").handle,
+  "/lib/*": fileController("../../../lib").handle,
+  "/json/*": fileController("../../../json").handle,
+  "/url/*": urlController.handle,
+  "/sub/fetch*": subController.fetch,
+  "/sub/*": subController.handle,
+  "/": jsonController.handle,
   "/*": fileController("../../static").handle,
 };
 
