@@ -1,4 +1,4 @@
-import { Spider } from "./core_spider.js";
+import { RemoteRenderSpider } from "./core_remote_render_spider.js";
 import { _, load } from "./catvod-assets/js/lib/cat.js";
 import { VodDetail } from "../lib/vod.js";
 import * as Utils from "../lib/utils.js";
@@ -6,12 +6,13 @@ import * as Utils from "../lib/utils.js";
 import { JadeLogging } from "../lib/log.js";
 const jadeLog = new JadeLogging(Utils.getCurrentFileName(), "DEBUG");
 
-class ABC extends Spider {
-  PROXY_URL = "http://192.168.31.171";
+class ABC extends RemoteRenderSpider {
   DOMAIN = "https://123animehub.cc";
+  PLAY_REFERER = "https://play.bunnycdn.to/";
+  PLAY_FLAG = "span.tip.tab[data-name='10']";
 
   async homeContent(filter) {
-    jadeLog.info("homeContent params: filter=" + filter);
+    jadeLog.info("homeContent params: filter=" + filter + ", browser proxy=" + this.PROXY_URL);
 
     this.classes = [
       { type_id: "/home", type_name: "Trending" },
@@ -95,7 +96,7 @@ class ABC extends Spider {
 
     const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}`;
     try {
-      const res = await req(url, { method: "get", timeout: 15000 });
+      const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
       const json = JSON.parse(res.content);
       const $ = load(json.html);
 
@@ -188,33 +189,6 @@ class ABC extends Spider {
     return output;
   }
 
-  async playerContent(flag, id, vipFlags) {
-    const matches = id.match(/\/anime\/(.*?)\/episode\/(\d+)/);
-    const animeName = matches ? matches[1] : "";
-    const episodeNumber = matches ? matches[2] : "";
-    jadeLog.info(
-      `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}, parsed: anime=${animeName}, episode=${episodeNumber}`
-    );
-    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${id}?flag=span.tip.tab[data-name="10"]`;
-    try {
-      const res = await req(url, { method: "get", timeout: 15000 });
-      const json = JSON.parse(res.content);
-      this.result.setSubs([
-        {
-          name: "sub",
-          format: "application/x-subrip",
-          url: `${this.PROXY_URL}/sub/${animeName}-${episodeNumber}.srt`,
-        },
-      ]);
-      let headers = this.getHeader();
-      headers["Referer"] = "https://play.bunnycdn.to/";
-      this.result.header = headers;
-      return this.result.play(json.url);
-    } catch (e) {
-      jadeLog.info(e.stack);
-    }
-    return this.result.play("");
-  }
 
   async setSearch(key, quick, pg) {
     const cheerio = await this.getHtml(this.DOMAIN + "/search?keyword=" + key);
