@@ -42,7 +42,7 @@ export const fileController = (baseDir: string) => {
         const contentType = mime.lookup(filePath) || "application/octet-stream";
         res.setHeader("Content-Type", contentType);
         const stream = fs.createReadStream(filePath);
-        stream.on("error", (err) => {
+        stream.on("error", () => {
           res.statusCode = 500;
           res.end("File read error");
         });

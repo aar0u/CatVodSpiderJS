@@ -1,10 +1,10 @@
 import { IncomingMessage, ServerResponse } from "http";
 
 import browser from "../browser";
-import { getCache } from "../cache/cache";
 import { BaseParser } from "../parsers/BaseParser";
 import { parserFactory } from "../parsers/parserFactory";
-import { color, getOrigin, normalizeUrl } from "../utils";
+import { getOrigin } from "../utils";
+import { color } from "../utils/color";
 
 export const urlController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
@@ -15,17 +15,12 @@ export const urlController = {
     const fullPath = url.pathname + url.search;
     const targetUrl = decodeURIComponent(fullPath.split("/url/")[1]);
 
+    console.log(`[URL] ${fullPath.toString()}, ${targetUrl}, ${selector}`);
+
     res.setHeader("Content-Type", "application/json");
 
     if (!targetUrl) {
       res.end(JSON.stringify({ error: "Missing url parameter" }));
-      return;
-    }
-
-    const cached = await getCache(normalizeUrl(targetUrl));
-    if (cached) {
-      console.log(`Serving ${color.info("cached")} for ${targetUrl}`);
-      res.end(JSON.stringify(cached.item));
       return;
     }
 
@@ -35,6 +30,11 @@ export const urlController = {
       let isCompleted = false; // 添加状态锁防止多次 resolve
 
       const onSuccess = (data) => {
+        const logMsg = JSON.stringify({ ...data, html: "[omitted]" });
+        console.log(
+          `${color.success("[URL] Response")} (ignored: ${isCompleted}) - ${logMsg}`,
+        );
+
         if (isCompleted) return;
         isCompleted = true;
 
@@ -42,17 +42,19 @@ export const urlController = {
       };
 
       const onFail = (err) => {
+        const logMsg = err instanceof Error ? err.message : err;
+        console.log(
+          `${color.danger("[URL] Error")} (ignored: ${isCompleted}) - ${logMsg}`,
+        );
+
         if (isCompleted) return;
         isCompleted = true;
-
-        res.end(
-          JSON.stringify({ error: err instanceof Error ? err.message : err }),
-        );
+        res.end(JSON.stringify({ error: logMsg }));
       };
 
       await browser(targetUrl, selector, parser, onSuccess, onFail);
     } catch (err) {
-      console.error(`Error on urlController: ${err}`);
+      console.error(`${color.danger("[URL]")} Error: ${err}`);
       res.end(
         JSON.stringify({
           error: err instanceof Error ? err.message : "Unknown error",

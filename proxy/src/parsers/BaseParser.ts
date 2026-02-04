@@ -1,11 +1,10 @@
-import { HTTPResponse, Page } from "puppeteer";
+import { Response, Page } from "playwright";
 
 export interface BaseParser {
-  beforeHandleResponse(page, selector: string);
+  beforeHandleResponse(page: Page, selector: string);
   handleResponse(
-    response: HTTPResponse,
+    response: Response,
     page: Page,
-    onSuccess: (data) => void,
-    onFail: (error) => void,
-  );
+    onComplete: (data: unknown) => void,
+  ): Promise<boolean>;
 }

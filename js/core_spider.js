@@ -280,6 +280,23 @@ class Spider {
         return {"User-Agent": Utils.CHROME, "Referer": this.siteUrl + "/"};
     }
 
+    /**
+     * Get subtitle MIME type based on file extension
+     * @param {string} ext - File extension (e.g., 'vtt', 'ass', 'ssa', 'srt')
+     * @returns {string} MIME type for the subtitle format
+     */
+    getSubFormat(ext) {
+        switch (ext) {
+            case "vtt":
+                return "text/vtt";
+            case "ass":
+            case "ssa":
+                return "text/x-ssa";
+            default:
+                return "application/x-subrip";
+        }
+    }
+
     async getResponse(reqUrl, params, headers, redirect_url, return_cookie, buffer, response,proxy) {
         {
             if (response.headers["location"] !== undefined) {

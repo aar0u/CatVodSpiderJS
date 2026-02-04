@@ -1,0 +1,11 @@
+# OKTV期待的结果，JSON->BEAN https://github.com/FongMi/TV/blob/release/app/src/main/java/com/fongmi/android/tv/bean/Result.java#L68
+GET http://localhost:8787/url/https://9animetv.to/watch/one-piece-100
+
+# 字幕推送
+GET http://192.168.31.174:9978/action?do=refresh&type=subtitle&path=https://mgstatics.xyz/subtitle/ca0f113e5a71d57b8dff307bf9bec4ca/eng-2.vtt
+
+GET http://tv.999888987.xyz/url/https://9animetv.to/watch/one-piece-100
+
+GET http://tv.999888987.xyz/sub
+
+GET http://52.230.65.50/sub

@@ -46,6 +46,30 @@ function verifyAndDecrypt(data: string): string {
   return data;
 }
 
+async function fetchConfigData(
+  url: string,
+): Promise<{ sites: Record<string, unknown>[]; spider?: string } | null> {
+  try {
+    const response = await axios.get(url, {
+      headers: { "User-Agent": "okhttp/5.0.0-alpha.14" },
+      timeout: 10000,
+    });
+
+    let jsonData: { sites: Record<string, unknown>[]; spider?: string };
+    if (typeof response.data === "string") {
+      const decryptedData = verifyAndDecrypt(response.data);
+      const cleanedData = decryptedData.replace(/^\s*?\/\/.*?\r?\n/gm, ""); // 移除注释
+      jsonData = JSON.parse(cleanedData);
+    } else {
+      jsonData = response.data;
+    }
+    return jsonData;
+  } catch (error) {
+    console.error(`Failed to fetch config from ${url}:`, error.message);
+    return null;
+  }
+}
+
 export const jsonController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
     // Log request details
@@ -63,6 +87,7 @@ export const jsonController = {
       }
       console.log(logMsg);
     });
+
     try {
       const host = getOrigin(req);
       const url = new URL(req.url || "", host);
@@ -74,17 +99,29 @@ export const jsonController = {
       const config = url.searchParams.get("cf") || urls.default;
       const cfUrl = urls.sources[config];
       console.log(`Retrieving ${color.info(config)} from ${cfUrl}`);
-      const response = await axios.get(cfUrl, {
-        headers: { "User-Agent": "okhttp/5.0.0-alpha.14" },
-      });
 
-      let jsonData: { sites: { name: string }[] };
-      if (typeof response.data === "string") {
-        const decryptedData = verifyAndDecrypt(response.data);
-        const cleanedData = decryptedData.replace(/^\s*?\/\/.*?\r?\n/gm, ""); // 移除注释
-        jsonData = JSON.parse(cleanedData);
-      } else {
-        jsonData = response.data;
+      const cfgData = await fetchConfigData(cfUrl);
+      if (!cfgData) {
+        throw new Error(`Failed to fetch main config from ${cfUrl}`);
+      }
+
+      let allSites = cfgData.sites || [];
+      if (config !== "饭太硬" && urls.sources["饭太硬"]) {
+        console.log(`Additionally retrieving "饭太硬" for "秒播" sites`);
+        const ftyData = await fetchConfigData(urls.sources["饭太硬"]);
+        if (ftyData && ftyData.sites) {
+          const ftySites = ftyData.sites
+            .filter(
+              (site: { name: string }) =>
+                site.name && site.name.includes("秒播"),
+            )
+            .map((site: { name: string }) => ({
+              ...site,
+              name: `[饭]${site.name}`,
+              jar: ftyData.spider,
+            }));
+          allSites = [...allSites, ...ftySites];
+        }
       }
 
       // 过滤 sites
@@ -92,8 +129,8 @@ export const jsonController = {
       const keepKeys = ["WexZhaoPansoGuard", "Wexconfig"];
       const priorityKeys = ["WexkuihuatvGuard", "Wexwencai"];
 
-      const filteredSites = jsonData.sites
-        .map((site: { key: string; name: string }) => {
+      const filteredSites = allSites
+        .map((site: { key: string; name: string; changeable?: number }) => {
           if (
             !new Set([...keepKeys, ...priorityKeys]).has(site.key) &&
             ignoreKeywords.some((keyword) => site.name.includes(keyword))
@@ -107,7 +144,7 @@ export const jsonController = {
           const changeable = priorityKeys.includes(site.key) ? 1 : 0;
           return {
             ...site,
-            originalChangeable: site["changeable"],
+            originalChangeable: site.changeable,
             changeable,
           };
         })
@@ -119,7 +156,7 @@ export const jsonController = {
       const newSites = JSON.parse(sitesData);
 
       const filteredData = {
-        ...jsonData,
+        ...cfgData,
         sites: [...newSites, ...filteredSites], // 将 newSites 放在第一个位置
       };
 
