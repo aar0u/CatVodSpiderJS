@@ -1,22 +1,21 @@
-
 import "./logger";
 import { createServer } from "http";
 
 import { config } from "./config/config";
+import { dumpController } from "./controllers/dumpController";
 import { fileController } from "./controllers/fileController";
 import { jsonController } from "./controllers/jsonController";
-import { subController } from "./controllers/subController";
 import { urlController } from "./controllers/urlController";
 import { getOrigin } from "./utils";
 
 const routes = {
-   "/js/*": fileController("../../../js").handle,
-   "/lib/*": fileController("../../../lib").handle,
-   "/json/*": fileController("../../../json").handle,
-   "/url/*": urlController.handle,
-   "/sub/fetch*": subController.fetch,
-   "/sub/*": subController.handle,
-   "/": jsonController.handle,
+  "/js/*": fileController("../../../js").handle,
+  "/lib/*": fileController("../../../lib").handle,
+  "/json/*": fileController("../../../json").handle,
+  "/url/*": urlController.handle,
+  "/sub/rec": dumpController.receive,
+  "/sub/*": dumpController.handle,
+  "/": jsonController.handle,
   "/*": fileController("../../static").handle,
 };
 

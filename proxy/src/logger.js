@@ -1,7 +1,6 @@
+import fs from "fs";
 
-import fs from 'fs';
-
-const LOG_FILE = process.env.LOG_FILE || 'app.log';
+const LOG_FILE = process.env.LOG_FILE || "app.log";
 const MAX_LOG_SIZE = parseInt(process.env.MAX_LOG_SIZE, 10) || 5 * 1024 * 1024; // 5 MB
 
 function checkLogSize() {
@@ -10,18 +9,20 @@ function checkLogSize() {
     if (stats.size > MAX_LOG_SIZE) {
       fs.truncateSync(LOG_FILE, 0);
     }
-  } catch (e) {}
+  } catch {
+    // ignore errors
+  }
 }
 
-const logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
-logStream.on('error', (err) => {
+const logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
+logStream.on("error", (err) => {
   // fallback: print to console if log file fails
-  console.error('Logger stream error:', err);
+  console.error("Logger stream error:", err);
 });
 
 function formatLog(level, args) {
   const timestamp = new Date().toISOString();
-  return `[${timestamp}] [${level}] ` + args.map(String).join(' ') + '\n';
+  return `[${timestamp}] [${level}] ` + args.map(String).join(" ") + "\n";
 }
 
 const originalLog = console.log;
@@ -31,17 +32,17 @@ const originalWarn = console.warn;
 console.log = function (...args) {
   originalLog.apply(console, args);
   checkLogSize();
-  logStream.write(formatLog('INFO', args));
+  logStream.write(formatLog("INFO", args));
 };
 
 console.error = function (...args) {
   originalError.apply(console, args);
   checkLogSize();
-  logStream.write(formatLog('ERROR', args));
+  logStream.write(formatLog("ERROR", args));
 };
 
 console.warn = function (...args) {
   originalWarn.apply(console, args);
   checkLogSize();
-  logStream.write(formatLog('WARN', args));
+  logStream.write(formatLog("WARN", args));
 };

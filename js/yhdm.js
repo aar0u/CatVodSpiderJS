@@ -5,6 +5,7 @@
  * - Java implementation: https://github.com/FongMi/TV/blob/b67af3c691f1cff410cb692cb7802e31289ac195/quickjs/src/main/java/com/fongmi/quickjs/crawler/Spider.java#L160
  * - JavaScript libraries: https://github.com/FongMi/TV/blob/release/quickjs/src/main/assets/js/lib/
  * - JavaScript loader: https://github.com/FongMi/TV/blob/a5aac3ed7be1b977ac59602fa9c53c7e51127319/app/src/main/java/com/fongmi/android/tv/api/loader/JsLoader.java#L32
+ * - Loaders: https://github.com/FongMi/TV/commit/0c8e12f5ae3d65bc8afff64ebdd07e9fdef98d18
  *
  * The Spider.java file shows how JavaScript spiders are loaded and executed.
  * The js/lib directory contains the base Spider class and HTTP utilities.

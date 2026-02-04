@@ -1,4 +1,4 @@
-import { Spider } from "./core_spider.js";
+import { RemoteRenderSpider } from "./core_remote_render_spider.js";
 import { _, load } from "./catvod-assets/js/lib/cat.js";
 import { VodDetail } from "../lib/vod.js";
 import * as Utils from "../lib/utils.js";
@@ -6,12 +6,13 @@ import * as Utils from "../lib/utils.js";
 import { JadeLogging } from "../lib/log.js";
 const jadeLog = new JadeLogging(Utils.getCurrentFileName(), "DEBUG");
 
-class ABC extends Spider {
-  PROXY_URL = "http://192.168.31.171";
+class ABC extends RemoteRenderSpider {
   DOMAIN = "https://9animetv.to";
+  PLAY_REFERER = "https://rapid-cloud.co/";
+  PLAY_FLAG = ".servers-dub .server-item:first-child";
 
   async homeContent(filter) {
-    jadeLog.info("homeContent params: filter=" + filter);
+    jadeLog.info("homeContent params: filter=" + filter + ", browser proxy=" + this.PROXY_URL);
 
     this.classes = [{ type_id: "/home", type_name: "首页" }];
 
@@ -79,10 +80,9 @@ class ABC extends Spider {
     jadeLog.info(`detailContent params: ids=${ids}`);
 
     try {
-      // const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}?flag=${encodeURIComponent('.servers-dub .server-item:first-child')}`;
       const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}`;
 
-      const res = await req(url, { method: "get", timeout: 15000 });
+      const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
       const json = JSON.parse(res.content);
       const $ = load(json.html);
 
@@ -152,7 +152,12 @@ class ABC extends Spider {
           : serverName;
 
         const serverId = $server.attr("data-id");
-        jadeLog.info(`Found server: ${fullServerName} with ID: ${serverId}`);
+
+        // Keep only the first DUB server to avoid projector freezing
+        if (playUrlsList.length > 0 || !fullServerName.includes("DUB")) {
+          jadeLog.info(`Skipping server: ${fullServerName} (ID: ${serverId})`);
+          return;
+        }
 
         const episodes = [];
         $(`.episodes-ul a.ep-item`).each((_, ep) => {
@@ -188,54 +193,6 @@ class ABC extends Spider {
     const output = this.result.detail(this.vodDetail);
     jadeLog.info(`output: ${output}`);
     return output;
-  }
-
-  async playerContent(flag, id, vipFlags) {
-    jadeLog.info(
-      `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}`
-    );
-    const url = `${this.PROXY_URL}/url/${
-      this.DOMAIN
-    }${id}&flag=${encodeURIComponent(".servers-dub .server-item:first-child")}`;
-    try {
-      const res = await req(url, { method: "get", timeout: 15000 });
-      const json = JSON.parse(res.content);
-
-      if (json.subs) {
-        const subId = json.subs[0];
-        const ext = subId.split(".").pop().toLowerCase();
-
-        const subFormat = (() => {
-          switch (ext) {
-            case "vtt":
-              return "text/vtt";
-            case "ass":
-            case "ssa":
-              return "text/x-ssa";
-            default:
-              return "application/x-subrip";
-          }
-        })();
-
-        this.result.setSubs([
-          {
-            name: "sub",
-            format: subFormat,
-            url: this.PROXY_URL + subId,
-          },
-        ]);
-      }
-      let headers = this.getHeader();
-      headers["Referer"] = "https://rapid-cloud.co/";
-      this.result.header = headers;
-
-      const output = this.result.play(json.url);
-      jadeLog.info(`output: ${output}`);
-      return output;
-    } catch (e) {
-      jadeLog.info(e.stack);
-    }
-    return this.result.play("");
   }
 
   getVodListFromSection($, selector) {

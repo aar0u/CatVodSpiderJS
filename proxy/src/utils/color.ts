@@ -2,7 +2,7 @@ import chalk from "chalk";
 
 export const color = {
   info(message: string): string {
-    return chalk.blue(message);
+    return chalk.cyan(message);
   },
   notice(message: string): string {
     return chalk.yellow(message);

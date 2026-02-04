@@ -11,16 +11,23 @@
   ],
   "sites": [
     {
-      // "api": "csp_ABC",
       "api": "../js/123anime.js",
+      "searchable": 1,
       "changeable": 0,
       "key": "123animehub",
-      "name": "B & C",
-      "searchable": 1,
+      "name": "🥇123anime🥇",
       "timeout": 50,
-      "ext": {
-        "box": "TVBox"
-      },
+      "ext": {},
+      "type": 3
+    },
+    {
+      "api": "../js/9anime.js",
+      "searchable": 1,
+      "changeable": 0,
+      "key": "9anime",
+      "name": "🥇9anime🥇",
+      "timeout": 50,
+      "ext": {},
       "type": 3
     },
     {

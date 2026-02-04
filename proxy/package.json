@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server.ts",
+    "dev": "nodemon --ignore \"cache.json\" --ignore \"*.srt\" --exec tsx src/server.ts",
     "start": "npx tsx src/server.ts",
     "lint": "eslint --fix . && prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,md}\""
   },
@@ -15,9 +15,10 @@
     "axios": "^1.7.9",
     "chalk": "^5.4.1",
     "cheerio": "^1.0.0",
-    "puppeteer": "^24.2.0",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "mime-types": "^3.0.2",
+    "playwright": "^1.49.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.24.0",
@@ -26,6 +27,6 @@
     "eslint-plugin-prettier": "^5.2.3",
     "nodemon": "^3.1.9",
     "prettier": "^3.5.0",
-    "tsx": "^4.19.2"
+    "tsx": "^4.21.0"
   }
 }

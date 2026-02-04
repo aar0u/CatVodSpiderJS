@@ -1,3 +1,3 @@
 export const config = {
-  port: process.env.PORT || 80, // 从环境变量获取端口号
+  port: Number(process.env.PORT) || 8787, // 从环境变量获取端口号
 };
