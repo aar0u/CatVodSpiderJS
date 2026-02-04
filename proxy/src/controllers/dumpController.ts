@@ -16,7 +16,7 @@ export const dumpController = {
       return;
     }
 
-    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
     console.log(
       `${req.method}: ${req.url}, Headers: ${JSON.stringify(req.headers)}`,
     );
@@ -27,7 +27,7 @@ export const dumpController = {
 
     if (!fileName) {
       res.statusCode = 400;
-      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
       res.end(JSON.stringify({ error: "Missing X-File-Name header" }));
       return;
     }

@@ -41,6 +41,18 @@ export const fileController = (baseDir: string) => {
         // 使用流式读取和返回文件内容，提升性能
         const contentType = mime.lookup(filePath) || "application/octet-stream";
         res.setHeader("Content-Type", contentType);
+
+        // 对于二进制文件，不要设置字符编码
+        const isBinaryFile =
+          contentType.startsWith("image/") ||
+          contentType.startsWith("video/") ||
+          contentType.startsWith("audio/") ||
+          contentType.includes("octet-stream");
+
+        if (!isBinaryFile) {
+          res.setHeader("Content-Type", `${contentType}; charset=utf-8`);
+        }
+
         const stream = fs.createReadStream(filePath);
         stream.on("error", () => {
           res.statusCode = 500;
