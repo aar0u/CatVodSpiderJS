@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --ignore \"cache.json\" --ignore \"*.srt\" --exec tsx src/server.ts",
-    "start": "npx tsx src/server.ts",
+    "dev": "tsx --watch src/server.ts",
+    "start": "tsx src/server.ts",
     "lint": "eslint --fix . && prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,md}\""
   },
   "prettier": {

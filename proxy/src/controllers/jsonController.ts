@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 
 import axios from "axios";
 
+import { replaceUrlsInJson } from "../cache/resourceCache";
 import { color, getOrigin } from "../utils";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +50,10 @@ function verifyAndDecrypt(data: string): string {
 async function fetchConfigData(
   url: string,
 ): Promise<{ sites: Record<string, unknown>[]; spider?: string } | null> {
+  const cacheKey = crypto.createHash("md5").update(url).digest("hex");
+  const cacheDir = path.join(__dirname, "../../static/cache");
+  const cachePath = path.join(cacheDir, `${cacheKey}.json`);
+
   try {
     const response = await axios.get(url, {
       headers: { "User-Agent": "okhttp/5.0.0-alpha.14" },
@@ -63,10 +68,36 @@ async function fetchConfigData(
     } else {
       jsonData = response.data;
     }
+
+    // 保存到缓存
+    await fs.mkdir(cacheDir, { recursive: true });
+
+    const cacheData = {
+      ...jsonData,
+      _cached: false,
+      _cacheTime: new Date().toISOString(),
+    };
+    await fs.writeFile(cachePath, JSON.stringify(cacheData), "utf-8");
+    console.log(`[JSON CACHE] Saved new config for ${url}`);
+
     return jsonData;
   } catch (error) {
     console.error(`Failed to fetch config from ${url}:`, error.message);
-    return null;
+
+    // 如果获取失败，尝试返回缓存
+    try {
+      const cachedData = await fs.readFile(cachePath, "utf-8");
+      const parsedCache = JSON.parse(cachedData);
+      console.log(`[JSON CACHE] Fallback to cached config for ${url}`);
+      return {
+        ...parsedCache,
+        _cached: true,
+        _cacheTime: parsedCache._cacheTime,
+      };
+    } catch {
+      // 缓存也不存在，返回null
+      return null;
+    }
   }
 }
 
@@ -78,16 +109,28 @@ export const jsonController = {
       body += chunk;
     });
     req.on("end", () => {
-      let logMsg = "[jsonController] Incoming request:\n";
-      logMsg += `  Method: ${req.method}\n`;
-      logMsg += `  URL: ${req.url}\n`;
-      logMsg += `  Headers: ${JSON.stringify(req.headers, null, 2)}\n`;
+      const host = req.headers.host || "unknown";
+      const userAgent = req.headers["user-agent"] || "unknown";
+      const forwarded =
+        req.headers["x-forwarded-for"] || req.headers["x-real-ip"];
+
+      let logMsg = `[jsonController] ${req.method}: ${req.url}\n`;
+      logMsg += `  Host: ${host}\n`;
+      logMsg += `  UA: ${userAgent}\n`;
+      logMsg += `  IP: ${forwarded ? (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(",")[0]) : "unknown"}\n`;
+
       if (body) {
-        logMsg += `  Body: ${body}\n`;
+        const bodyLog =
+          body.length > 200
+            ? `${body.slice(0, 200)}… (${body.length} chars)`
+            : body;
+        logMsg += `  Body: ${bodyLog}\n`;
       }
+
       console.log(logMsg);
     });
 
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     try {
       const host = getOrigin(req);
       const url = new URL(req.url || "", host);
@@ -160,8 +203,13 @@ export const jsonController = {
         sites: [...newSites, ...filteredSites], // 将 newSites 放在第一个位置
       };
 
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify(filteredData));
+      // 替换远程资源URL为本地缓存URL
+      const processedData = (await replaceUrlsInJson(
+        filteredData,
+        host,
+      )) as Record<string, unknown>;
+
+      res.end(JSON.stringify(processedData));
     } catch (error) {
       res.statusCode = 500;
       res.end(

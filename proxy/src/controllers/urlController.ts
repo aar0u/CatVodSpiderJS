@@ -17,7 +17,7 @@ export const urlController = {
 
     console.log(`[URL] ${fullPath.toString()}, ${targetUrl}, ${selector}`);
 
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
 
     if (!targetUrl) {
       res.end(JSON.stringify({ error: "Missing url parameter" }));
