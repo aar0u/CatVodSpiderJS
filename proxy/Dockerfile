@@ -5,9 +5,9 @@
 FROM node:20-slim
 WORKDIR /app
 
-# Set environment variables for proper character encoding
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
+ENV TZ=Asia/Singapore
 
 ARG TARGETARCH
 
