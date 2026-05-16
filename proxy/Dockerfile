@@ -38,6 +38,8 @@ COPY ./lib ./catvodspiderjs/lib
 COPY ./proxy ./catvodspiderjs/proxy
 RUN cd catvodspiderjs/proxy && npm install
 
+RUN npm install -g pm2
+
 RUN npx playwright install --with-deps chromium
 
 # VNC
@@ -52,4 +54,4 @@ CMD Xvfb :99 -screen 0 1280x1024x24 -ac +extension GLX +render > /tmp/xvfb.log 2
     # Web interface
     /usr/share/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 8445 > /tmp/novnc.log 2>&1 & \
     # App crawler proxy
-    cd catvodspiderjs/proxy && PORT=8787 HEADLESS=true BROWSER_TIMEOUT=1200 PAGE_TIMEOUT=120 PAGE_CLOSE_DELAY=2 npm start
+    cd catvodspiderjs/proxy && PORT=8787 BROWSER_TIMEOUT=1200 PAGE_TIMEOUT=120 PAGE_CLOSE_DELAY=2 npm start
