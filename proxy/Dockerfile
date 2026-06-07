@@ -2,7 +2,7 @@
 # run from proxy folder: docker build -f Dockerfile ..
 # run from . folder: docker build -f proxy/Dockerfile .
 
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 
 ENV LANG=C.UTF-8
@@ -19,6 +19,7 @@ RUN echo ${TARGETARCH} && \
     novnc \
     websockify \
     fluxbox \
+    tmux \
     vim \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -28,6 +29,9 @@ RUN mkdir -p ./catvodspiderjs ./others
 # Create a shortcut script for editing config
 RUN echo '#!/bin/bash\nvim /app/catvodspiderjs/proxy/src/config/cfg.json' > /usr/local/bin/edit-config && \
     chmod +x /usr/local/bin/edit-config
+
+# Set tmux mouse mode enabled by default
+RUN echo 'set -g mouse on' > /root/.tmux.conf
 
 # Static files and library assets
 COPY ./json ./catvodspiderjs/json
