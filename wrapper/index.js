@@ -3,6 +3,7 @@
 // !!!!! Do not use in release mode. Just a native inject fake wrapper for test spider. !!!!!
 import axios, {toFormData} from 'axios';
 import crypto from 'crypto';
+import http from 'http';
 import https from 'https';
 import fs from 'node:fs';
 import qs from 'qs';
@@ -64,15 +65,17 @@ async function request(url, opt) {
         //         host: '127.0.0.1', port: 7890,
         //     }
         // });
-        let agent;
+        let httpAgent;
+        let httpsAgent;
         if (opt.proxy){
-            agent = tunnel.httpsOverHttp({
+            httpsAgent = tunnel.httpsOverHttp({
                     proxy: {
                         host: '127.0.0.1', port: 7890,
                     }
                 });
         }else{
-            agent = https.Agent({ rejectUnauthorized: false,})
+            httpAgent = new http.Agent({ keepAlive: false });
+            httpsAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: false });
         }
         var resp = await axios(url, {
             responseType: respType,
@@ -81,15 +84,16 @@ async function request(url, opt) {
             data: data,
             timeout: timeout,
             maxRedirects: !redirect ? 0 : null,
-            httpsAgent: agent
+            proxy: false,
+            httpAgent: httpAgent,
+            httpsAgent: httpsAgent
 
         });
         var data = resp.data;
 
         var resHeader = {};
-        for (const hks of resp.headers) {
-            var v = hks[1];
-            resHeader[hks[0]] = Array.isArray(v) ? (v.length == 1 ? v[0] : v) : v;
+        for (const [key, value] of Object.entries(resp.headers || {})) {
+            resHeader[key] = Array.isArray(value) ? (value.length == 1 ? value[0] : value) : value;
         }
 
         if (!returnBuffer) {
@@ -117,9 +121,9 @@ async function request(url, opt) {
         }
         return {code: resp.status, headers: resHeader, content: data};
     } catch (error) {
-        resp = error.response
+        const errorResp = error.response;
         try {
-            return {code: resp.status, headers: resp.headers, content: JSON.stringify(resp.data)};
+            return {code: errorResp.status, headers: errorResp.headers, content: JSON.stringify(errorResp.data)};
         } catch (err) {
             return {headers: {}, content: ''};
         }

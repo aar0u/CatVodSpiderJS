@@ -47,6 +47,14 @@ class RemoteRenderSpider extends Spider {
     return "http://127.0.0.1:8787"; // 默认回退值
   }
 
+  async getPlayClicks(flag, id) {
+    return this.PLAY_FLAG ? [this.PLAY_FLAG] : [];
+  }
+
+  async getPlayReferer(flag, id, json) {
+    return this.PLAY_REFERER;
+  }
+
   /**
    * Generic player content handler using remote proxy
    * @param {string} flag - Play flag
@@ -58,9 +66,12 @@ class RemoteRenderSpider extends Spider {
     await this.jadeLog.info(
       `playerContent params: flag=${flag}, id=${id}, vipFlags=${vipFlags}`
     );
-    const browserUrl = encodeURIComponent(this.DOMAIN + id);
-    const flagParam = this.PLAY_FLAG ? `?flag=${encodeURIComponent(this.PLAY_FLAG)}` : "";
-    const url = `${this.PROXY_URL}/url/${browserUrl}${flagParam}`;
+    const query = [`url=${encodeURIComponent(this.DOMAIN + id)}`];
+    const clicks = (await this.getPlayClicks(flag, id)) || [];
+    for (const click of clicks.filter(Boolean)) {
+      query.push(`click=${encodeURIComponent(click)}`);
+    }
+    const url = `${this.PROXY_URL}/url?${query.join("&")}`;
     try {
       const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
       if (!res.content) {
@@ -86,8 +97,9 @@ class RemoteRenderSpider extends Spider {
       }
 
       let headers = this.getHeader();
-      if (this.PLAY_REFERER) {
-        headers["Referer"] = this.PLAY_REFERER;
+      const playReferer = await this.getPlayReferer(flag, id, json);
+      if (playReferer) {
+        headers["Referer"] = playReferer;
       }
       this.result.header = headers;
 

@@ -12,7 +12,7 @@ const routes = {
   "/js/*": fileController("../../../js").handle,
   "/lib/*": fileController("../../../lib").handle,
   "/json/*": fileController("../../../json").handle,
-  "/url/*": urlController.handle,
+  "/url": urlController.handle,
   "/sub/rec": dumpController.receive,
   "/sub/*": dumpController.handle,
   "/": jsonController.handle,

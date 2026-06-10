@@ -15,16 +15,18 @@ export class DefaultParser implements BaseParser {
     this.handleResponse = this.handleResponse.bind(this);
   }
 
-  async beforeHandleResponse(page: Page, selector: string) {
+  async beforeHandleResponse(page: Page, selector: string | string[]) {
     // const svrTab = 'span.tip.tab[data-name="10"]';
-    try {
-      if (selector) {
-        await page.waitForSelector(selector, { timeout: 5000 });
-        await page.click(selector);
-        console.log(`${color.success("Clicked")} on ${selector}`);
+    const selectors = Array.isArray(selector) ? selector : [selector];
+    for (const item of selectors.filter(Boolean)) {
+      try {
+        await page.waitForSelector(item, { timeout: 5000 });
+        await page.click(item);
+        console.log(`${color.success("Clicked")} on ${item}`);
+      } catch (err: unknown) {
+        logError(`Failed to click ${item} - ${(err as Error).message}`);
+        throw err;
       }
-    } catch (err: unknown) {
-      logError(`Failed to click ${selector} - ${(err as Error).message}`);
     }
   }
 
@@ -35,12 +37,20 @@ export class DefaultParser implements BaseParser {
   ): Promise<boolean> {
     try {
       const url = response.url().toLowerCase();
-      if (!url.match(/\.(mp4|m3u8|vtt)/)) return false;
+      const contentType = response.headers()["content-type"] || "";
+
+      if (contentType.includes("application/json")) {
+        const captured = await this.captureJsonSource(response, onComplete);
+        if (captured) return true;
+      }
+
+      const pathname = new URL(url).pathname;
+      if (!pathname.match(/\.(mp4|m3u8|vtt)$/)) return false;
 
       console.log("(m3u8|vtt) ", url);
 
       // 1. 捕获 m3u8
-      if (url.endsWith("m3u8")) {
+      if (pathname.endsWith(".m3u8")) {
         if (!this.playable.url) {
           this.playable.url = url;
           console.log(`${color.success("Captured URL")} - ${url}`);
@@ -66,7 +76,7 @@ export class DefaultParser implements BaseParser {
       }
 
       // 2. 捕获字幕
-      else if (url.endsWith(".vtt") && !url.includes("thumbnails")) {
+      else if (pathname.endsWith(".vtt") && !url.includes("thumbnails")) {
         console.log(`${color.success("Subtitle")} - ${url}`);
         // 累积字幕
         if (!this.playable.subs) {
@@ -81,6 +91,31 @@ export class DefaultParser implements BaseParser {
     } catch (err) {
       logError(`Capturing - ${err.stack || err.message}`);
       // 错误也不立即终止，以防只是某个流的小错误
+      return false;
+    }
+  }
+
+  private async captureJsonSource(
+    response: Response,
+    onComplete: (data: unknown) => void,
+  ): Promise<boolean> {
+    try {
+      const data = await response.json();
+      const source = Array.isArray(data?.sources)
+        ? data.sources.find((item) => item?.file?.includes(".m3u8"))
+        : data?.sources;
+      const file = source?.file;
+
+      if (!file?.includes(".m3u8") || this.playable.url) return false;
+
+      this.playable.url = file;
+      this.playable.subs = (data.tracks || [])
+        .filter((track) => track?.file && track?.kind === "captions")
+        .map((track) => track.file);
+      console.log(`${color.success("Captured JSON source")} - ${file}`);
+      onComplete(this.playable);
+      return true;
+    } catch {
       return false;
     }
   }

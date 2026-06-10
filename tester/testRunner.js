@@ -42,13 +42,13 @@ const testCases = {
     init: { ext: {}, stype: 3 },
     tests: [
       { enabled: true, fn: "home", args: [true] },
-      { enabled: true, fn: "search", args: ["One Piece"] },
-      { enabled: false, fn: "category", args: ["/genere/Sports", 2, true, {}] },
-      { enabled: false, fn: "detail", args: ["/watch/one-piece-100"] },
+      { enabled: false, fn: "search", args: ["One Piece"] },
+      { enabled: false, fn: "category", args: ["/genre/action/", 2, true, {}] },
+      { enabled: false, fn: "detail", args: ["/anime/one-piece/"] },
       {
-        enabled: false,
+        enabled: true,
         fn: "play",
-        args: ["线路1", "/watch/one-piece-100?ep=94047"],
+        args: ["MegaPlay", "/anime/one-piece/episode-1/"],
       },
     ],
   },

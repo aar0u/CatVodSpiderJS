@@ -94,7 +94,7 @@ class ABC extends RemoteRenderSpider {
   async detailContent(ids) {
     jadeLog.info(`detailContent params: ids=${ids}`);
 
-    const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}`;
+    const url = `${this.PROXY_URL}/url?url=${encodeURIComponent(this.DOMAIN + ids)}`;
     try {
       const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
       const json = JSON.parse(res.content);

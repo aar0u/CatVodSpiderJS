@@ -116,7 +116,7 @@ function startTimeoutCheck() {
 
 export default async function (
   url: string,
-  selector: string,
+  selectors: string[],
   parser: BaseParser,
   onSuccess: (data: unknown) => void,
   onFail: (error: unknown) => void,
@@ -182,7 +182,7 @@ export default async function (
   // 1. 有 selector 时，避免捕获到默认的 m3u8（切换前的）
   // 2. 没有 selector 时，避免错过页面加载过程中的默认 m3u8
 
-  if (!selector) {
+  if (!selectors.length) {
     // 没有 selector 时，先设置响应监听，防止错过默认 m3u8, 因为页面一打开就会开始加载 m3u8
     page.on("response", responseHandler);
   }
@@ -206,11 +206,14 @@ export default async function (
         );
       }
 
-      // 跳转完成后执行 parser 的前置处理（如点击）, 只有当有 selector 时才调用 beforeHandleResponse
-      if (selector && !page.isClosed()) {
-        await parser.beforeHandleResponse(page, selector);
-        // 设置响应监听，确保捕获到点击切换后的片源，而不是默认片源
+      // 跳转完成后执行 parser 的前置处理（如点击）。
+      // 多个 click 中，前面的 click 用于准备 UI 状态，最后一个 click 触发需要捕获的播放请求。
+      if (selectors.length && !page.isClosed()) {
+        const setupSelectors = selectors.slice(0, -1);
+        const triggerSelector = selectors[selectors.length - 1];
+        if (setupSelectors.length) await parser.beforeHandleResponse(page, setupSelectors);
         page.on("response", responseHandler);
+        await parser.beforeHandleResponse(page, triggerSelector);
       }
     })
     .catch((err) => {

@@ -1,7 +1,7 @@
 import { Response, Page } from "playwright";
 
 export interface BaseParser {
-  beforeHandleResponse(page: Page, selector: string);
+  beforeHandleResponse(page: Page, selector: string | string[]);
   handleResponse(
     response: Response,
     page: Page,
