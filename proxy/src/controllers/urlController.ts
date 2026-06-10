@@ -111,17 +111,11 @@ async function pipeDownload(download: Download, res: ServerResponse) {
 export const urlController = {
   async handle(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url, getOrigin(req));
-    const selector = url.searchParams.get("flag");
+    const targetUrl = url.searchParams.get("url") || "";
+    const selectors = url.searchParams.getAll("click");
     const raw = url.searchParams.get("raw");
-    // Remove flag and raw parameters from search string if they exist
-    url.searchParams.delete("flag");
-    url.searchParams.delete("raw");
-    const fullPath = url.pathname + url.search;
-    const targetUrl = decodeURIComponent(fullPath.split("/url/")[1]);
 
-    console.log(
-      `[URL] ${fullPath.toString()}, ${targetUrl}, ${selector}, raw=${raw}`,
-    );
+    console.log(`[URL] ${url.pathname}, ${targetUrl}, ${selectors.join(" -> ")}, raw=${raw}`);
 
     if (!targetUrl) {
       res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -174,7 +168,7 @@ export const urlController = {
         res.end(JSON.stringify({ error: logMsg }));
       };
 
-      await browser(targetUrl, selector, parser, onSuccess, onFail);
+      await browser(targetUrl, selectors, parser, onSuccess, onFail);
     } catch (err) {
       console.error(`${color.danger("[URL]")} Error: ${err}`);
       res.end(

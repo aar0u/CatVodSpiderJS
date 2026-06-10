@@ -1,5 +1,4 @@
 import { RemoteRenderSpider } from "./core_remote_render_spider.js";
-import { _, load } from "./catvod-assets/js/lib/cat.js";
 import { VodDetail } from "../lib/vod.js";
 import * as Utils from "../lib/utils.js";
 
@@ -7,9 +6,7 @@ import { JadeLogging } from "../lib/log.js";
 const jadeLog = new JadeLogging(Utils.getCurrentFileName(), "DEBUG");
 
 class ABC extends RemoteRenderSpider {
-  DOMAIN = "https://9animetv.to";
-  PLAY_REFERER = "https://rapid-cloud.co/";
-  PLAY_FLAG = ".servers-dub .server-item:first-child";
+  DOMAIN = "https://9anime.blue";
 
   async homeContent(filter) {
     jadeLog.info("homeContent params: filter=" + filter + ", browser proxy=" + this.PROXY_URL);
@@ -37,9 +34,34 @@ class ABC extends RemoteRenderSpider {
       ],
     };
 
-    const output = this.result.home(this.classes, [], this.filterObj);
+    const $ = await this.getHtml(`${this.DOMAIN}/home`);
+    const topList = this.getTopAnimeList($);
+    const homeList = this.getVodListFromSection($, ".flw-item, .a-card");
+    const seenIds = new Set();
+    const vodList = [...topList, ...homeList].filter((vod) => {
+      if (!vod.vod_id || seenIds.has(vod.vod_id)) return false;
+      seenIds.add(vod.vod_id);
+      return true;
+    });
+
+    const output = this.result.home(this.classes, vodList, this.filterObj);
     jadeLog.info(`output: ${output}`);
     return output;
+  }
+
+  async getPlayClicks(flag, id) {
+    const { servers, hasDub } = await this.getEpisodeServers(id);
+    const serverIndex = servers.findIndex((server) => server.name === flag);
+    if (serverIndex < 0) return [];
+
+    const serverSelector = `.server-btn[data-index="${serverIndex}"]`;
+    return hasDub ? [serverSelector, '.type-tab[data-type="dub"]'] : [serverSelector];
+  }
+
+  async getPlayReferer(flag, id, json) {
+    const { servers } = await this.getEpisodeServers(id);
+    const server = servers.find((item) => item.name === flag);
+    return this.getOriginFromUrl(server?.url) || "";
   }
 
   async categoryContent(tid, pg, filter, extend) {
@@ -58,7 +80,7 @@ class ABC extends RemoteRenderSpider {
             .join("&")}`;
 
     let $ = await this.getHtml(url);
-    const vodList = this.getVodListFromSection($, ".flw-item");
+    const vodList = this.getVodListFromSection($, ".flw-item, .a-card");
     jadeLog.info(`Fetching URL: ${url}, ${vodList.length} items for category: ${tid}`);
     return this.result.category(vodList, pg, 1, 0);
   }
@@ -67,9 +89,9 @@ class ABC extends RemoteRenderSpider {
     jadeLog.info(`searchContent params: key=${key}, quick=${quick}`);
 
     const $ = await this.getHtml(
-      this.DOMAIN + "/search?keyword=" + encodeURIComponent(key)
+      this.DOMAIN + "/search?q=" + encodeURIComponent(key)
     );
-    this.vodList = this.getVodListFromSection($, ".flw-item");
+    this.vodList = this.getVodListFromSection($, ".flw-item, .a-card");
 
     const output = this.result.search(this.vodList);
     jadeLog.info(`output: ${output}`);
@@ -80,119 +102,158 @@ class ABC extends RemoteRenderSpider {
     jadeLog.info(`detailContent params: ids=${ids}`);
 
     try {
-      const url = `${this.PROXY_URL}/url/${this.DOMAIN}${ids}`;
-
-      const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
-      const json = JSON.parse(res.content);
-      const $ = load(json.html);
+      const id = this.normalizeDetailId(Array.isArray(ids) ? ids[0] : ids);
+      const $ = await this.getHtml(`${this.DOMAIN}${id}`);
 
       const vodDetail = new VodDetail();
-      vodDetail.vod_id = ids[0];
-
-      // Get basic info
-      const $filmPoster = $(".film-poster");
-      vodDetail.vod_pic = $filmPoster.find("img.film-poster-img").attr("src");
-
-      // Get title
-      vodDetail.vod_name = $(".film-name.dynamic-name").text().trim();
-
-      // Get description
-      vodDetail.vod_content = $(".film-description p.shorting").text().trim();
-
-      // Get metadata
-      const $meta = $(".meta");
-
-      // Get type
-      vodDetail.type_name = $meta
-        .find(".item:contains('Type:') .item-content a")
+      vodDetail.vod_id = id;
+      vodDetail.vod_pic = $(".poster-col img, img.poster-img, .anime-poster img")
+        .first()
+        .attr("src");
+      vodDetail.vod_name = $(".anime-title, h1").first().text().trim();
+      vodDetail.vod_content = $(".description").first().text().trim();
+      vodDetail.type_name = $(".meta-row .meta-badge")
+        .filter((_, el) => $(el).text().trim() === "TV" || $(el).text().trim() === "Movie")
+        .first()
         .text()
         .trim();
-
-      // Get studios
-      vodDetail.vod_director = $meta
-        .find(".item:contains('Studios:') .item-content a")
+      vodDetail.vod_year = $(".stat-item:contains('Year') .stat-value")
+        .first()
         .text()
         .trim();
+      vodDetail.vod_remarks = this.getInfoValue($, "Status:");
+      vodDetail.vod_director = this.getInfoValue($, "Studio:");
 
-      // Get date aired
-      vodDetail.vod_year = $meta
-        .find(".item:contains('Date aired:') .item-content span")
-        .text()
-        .trim()
-        .split(" to ")[0];
-
-      // Get status
-      vodDetail.vod_remarks = $meta
-        .find(".item:contains('Status:') .item-content span")
-        .text()
-        .trim();
-
-      // Get genres
       const genres = [];
-      $meta.find(".item:contains('Genres:') .item-content a").each((_, el) => {
-        genres.push($(el).text().trim());
+      $(".genres a, .genre-tag").each((_, el) => {
+        const genre = $(el).text().trim();
+        if (genre) genres.push(genre);
       });
       vodDetail.vod_area = genres.join(",");
 
-      const playFromList = [];
-      const playUrlsList = [];
+      const episodes = [];
+      const episodeUrls = new Set();
+      $(".episode-card").each((_, ep) => {
+        const $ep = $(ep);
+        const epUrl = $ep.attr("href");
+        if (!epUrl || !epUrl.includes("/episode-")) return;
 
-      $("#servers-content .server-item").each((serverIndex, server) => {
-        const $server = $(server);
-
-        // The server-item is inside a ps_-block-sub, so we need to find the parent first
-        const $parentBlock = $server.closest(".ps_-block-sub");
-        const serverType = $parentBlock.find(".ps__-title").text().trim() || "";
-
-        // Get server name from the button text
-        const serverName = $server.find("a.btn").text().trim();
-        // Combine type and name with proper spacing
-        const fullServerName = serverType
-          ? `${serverType} ${serverName}`
-          : serverName;
-
-        const serverId = $server.attr("data-id");
-
-        // Keep only the first DUB server to avoid projector freezing
-        if (playUrlsList.length > 0 || !fullServerName.includes("DUB")) {
-          jadeLog.info(`Skipping server: ${fullServerName} (ID: ${serverId})`);
-          return;
-        }
-
-        const episodes = [];
-        $(`.episodes-ul a.ep-item`).each((_, ep) => {
-          const $ep = $(ep);
-          const epNumber = $ep.attr("data-number");
-          const epId = $ep.attr("data-id");
-          const epUrl = $ep.attr("href");
-          if (epId && epUrl) {
-            episodes.push(`${epNumber}$${epUrl}`);
-          }
-        });
-
-        playFromList.push(`${fullServerName}$$$`);
-        playUrlsList.push(episodes.join("#") + "$$$");
-        jadeLog.info(
-          `Added server: ${fullServerName} with ${episodes.length} episodes`
-        );
+        const epNumber =
+          $ep.find(".ep-num").text().trim().replace(/^EP\s*/i, "") ||
+          epUrl.match(/episode-(\d+)/)?.[1];
+        if (episodeUrls.has(epUrl)) return;
+        episodeUrls.add(epUrl);
+        episodes.push(`${epNumber}$${epUrl}`);
       });
 
-      vodDetail.vod_play_from = playFromList.join("");
-      vodDetail.vod_play_url = playUrlsList.join("");
+      const totalEpisodes = Number(
+        ($.html().match(/var\s+totalEpisodes\s*=\s*(\d+)/) || [])[1]
+      );
+      const slug = ($.html().match(/var\s+animeSlug\s*=\s*['"]([^'"]+)['"]/) || [])[1];
+      if (slug && totalEpisodes > episodes.length) {
+        for (let i = 1; i <= totalEpisodes; i++) {
+          const epUrl = `/anime/${slug}/episode-${i}/`;
+          if (!episodeUrls.has(epUrl)) episodes.push(`${i}$${epUrl}`);
+        }
+      }
+
+      const playFrom = await this.getPlaySources(episodes[0]?.split("$")[1]);
+      const playUrl = episodes.join("#");
+      vodDetail.vod_play_from = playFrom.join("$$$");
+      vodDetail.vod_play_url = playFrom.map(() => playUrl).join("$$$");
 
       this.vodDetail = vodDetail;
     } catch (e) {
-      jadeLog.info(
-        `Error in detailContent: ${
-          e instanceof SyntaxError ? "Invalid JSON response" : e.message
-        }`
-      );
+      jadeLog.info(`Error in detailContent: ${e.message}`);
       return "";
     }
 
     const output = this.result.detail(this.vodDetail);
     jadeLog.info(`output: ${output}`);
     return output;
+  }
+
+  async getPlaySources(episodeId) {
+    const { servers } = await this.getEpisodeServers(episodeId);
+    return servers.map((server) => server.name).filter(Boolean);
+  }
+
+  async getEpisodeServers(id) {
+    if (!id?.includes("/episode-")) return { servers: [], hasDub: false };
+    this.serverCache = this.serverCache || {};
+    if (this.serverCache[id]) return this.serverCache[id];
+
+    const $ = await this.getHtml(`${this.DOMAIN}${id}`);
+    const html = $.html();
+    const hasDub = (html.match(/currentEpHasDub\s*:\s*(true|false)/) || [])[1] === "true";
+    const subServers = this.parseServerList(html, "subServers");
+    const dubServers = this.parseServerList(html, "dubServers");
+    const servers = hasDub && dubServers.length ? dubServers : subServers;
+
+    this.serverCache[id] = { servers, hasDub };
+    return this.serverCache[id];
+  }
+
+  parseServerList(html, key) {
+    const matched = html.match(new RegExp(`${key}\\s*:\\s*(\\[[\\s\\S]*?\\])`));
+    if (!matched) return [];
+    try {
+      return JSON.parse(matched[1]);
+    } catch {
+      return [];
+    }
+  }
+
+  getOriginFromUrl(url) {
+    return (url?.match(/^(https?:\/\/[^/]+)/) || [])[1]?.concat("/") || "";
+  }
+
+  normalizeDetailId(id) {
+    const matched = id?.match(/^(\/anime\/[^/]+\/)(?:episode-\d+\/)?$/);
+    return matched ? matched[1] : id;
+  }
+
+  cleanEpisodeName(name) {
+    return name
+      .trim()
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, "&")
+      .replace(/#/g, " ");
+  }
+
+  getInfoValue($, label) {
+    return $(".info-grid div")
+      .filter((_, el) => $(el).find(".label").text().trim() === label)
+      .first()
+      .find(".value")
+      .text()
+      .trim();
+  }
+
+  getTopAnimeList($) {
+    const vodList = [];
+
+    $(".top-h1, .top-row").each((_, item) => {
+      const $item = $(item);
+      const vod = new VodDetail();
+      vod.vod_id = this.normalizeDetailId($item.attr("href"));
+      vod.vod_name = $item.find(".top-h1-n, .top-rn").first().text().trim();
+      vod.vod_pic = $item.find("img").first().attr("src");
+
+      const rank = $item.find(".top-rank, .top-rk").first().text().trim();
+      const views = $item
+        .find(".top-h1-v, .top-rv")
+        .first()
+        .text()
+        .replace(/\s+/g, " ")
+        .trim();
+      vod.vod_remarks = [rank && `#${rank}`, views].filter(Boolean).join(" ");
+
+      if (vod.vod_id && vod.vod_name) vodList.push(vod);
+    });
+
+    return vodList;
   }
 
   getVodListFromSection($, selector) {
@@ -202,30 +263,26 @@ class ABC extends RemoteRenderSpider {
         const vod = new VodDetail();
         const $item = $(item);
 
-        // For 9anime search results - use film-poster instead of poster
-        const $filmPoster = $item.find(".film-poster");
-        const $filmDetail = $item.find(".film-detail");
-
-        // Get link from film-name
-        const $titleLink = $filmDetail.find(".film-name a");
+        const $titleLink = $item.find(".film-detail .film-name a, > a").first();
 
         if (!$titleLink.length) {
           jadeLog.info("No title link found, skipping item");
           return;
         }
 
-        vod.vod_id = $titleLink.attr("href");
-        vod.vod_name = $titleLink.attr("title") || $titleLink.text().trim();
+        vod.vod_id = this.normalizeDetailId($titleLink.attr("href"));
+        vod.vod_name =
+          $titleLink.find(".a-name").text().trim() ||
+          $titleLink.attr("title") ||
+          $titleLink.text().trim();
 
-        // Get image from film-poster
-        const $img = $filmPoster.find("img.film-poster-img");
+        const $img = $item.find("img.film-poster-img, .a-poster img").first();
         if ($img.length) {
           vod.vod_pic = $img.attr("data-src") || $img.attr("src");
         }
 
-        // Get status info from tick items
         const statusItems = [];
-        $item.find(".tick-item").each((_, el) => {
+        $item.find(".tick-item, .b-hd, .b-sub, .b-dub").each((_, el) => {
           statusItems.push($(el).text().trim());
         });
         vod.vod_remarks = statusItems.join(" ");
