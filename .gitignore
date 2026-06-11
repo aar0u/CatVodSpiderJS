@@ -1,8 +1,4 @@
 node_modules
 log
-open_config.json
-test.py
-tv_config.json
 .DS_Store
 local/
-proxy/package-lock.json

@@ -1,8 +1,8 @@
 {
   "name": "tv",
   "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "description": "OKTV/FongMi compatible CatVod JS spiders with a Playwright proxy",
+  "main": "scripts/test-spider.mjs",
   "type": "module",
   "directories": {
     "lib": "lib"
@@ -13,14 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.9",
-    "crypto-js": "^4.2.0",
-    "log4js": "^6.9.1",
-    "qs": "^6.11.2",
-    "tunnel": "^0.0.6"
+    "axios": "1.7.9",
+    "crypto-js": "4.2.0",
+    "log4js": "6.9.1",
+    "qs": "6.11.2",
+    "tunnel": "0.0.6"
   },
   "devDependencies": {
-    "@types/node": "^20.1.5",
-    "uglify-js": "^3.17.4"
+    "@types/node": "20.1.5",
+    "uglify-js": "3.17.4"
   }
 }
