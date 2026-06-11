@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx --watch src/server.ts",
+    "dev": "HEADLESS=false tsx --watch src/server.ts",
     "start": "tsx src/server.ts",
     "lint": "eslint --fix . && prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,md}\""
   },
@@ -11,10 +11,8 @@
     "trailingComma": "all"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
     "axios": "^1.7.9",
     "chalk": "^5.4.1",
-    "cheerio": "^1.0.0",
     "mime-types": "^3.0.2",
     "playwright": "1.57.0",
     "playwright-extra": "^4.3.6",
