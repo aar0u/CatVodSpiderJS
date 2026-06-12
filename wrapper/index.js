@@ -1,16 +1,113 @@
 // !!!!! Do not use in release mode. Just a native inject fake wrapper for test spider. !!!!!
 // !!!!! Do not use in release mode. Just a native inject fake wrapper for test spider. !!!!!
 // !!!!! Do not use in release mode. Just a native inject fake wrapper for test spider. !!!!!
-import axios, {toFormData} from 'axios';
-import crypto from 'crypto';
-import http from 'http';
-import https from 'https';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
-import qs from 'qs';
+import {dirname} from 'node:path';
+import {createRequire} from 'node:module';
 import {Uri, _} from '../js/catvod-assets/js/lib/cat.js';
-import tunnel from "tunnel";
 
 const confs = {};
+const PROXY_URL = 'http://127.0.0.1:7890';
+const DEFAULT_TIMEOUT = 5000;
+const require = createRequire(import.meta.url);
+let PROXY_DISPATCHER = null;
+let UNDISPATCHER_READY = false;
+
+function initDispatchers() {
+    if (UNDISPATCHER_READY) return;
+
+    UNDISPATCHER_READY = true;
+    try {
+        const {ProxyAgent} = require('undici');
+        PROXY_DISPATCHER = new ProxyAgent(PROXY_URL);
+    } catch (error) {
+        PROXY_DISPATCHER = null;
+    }
+}
+
+function normalizeHeaders(rawHeaders) {
+    const headers = {};
+    for (const [key, value] of rawHeaders.entries()) {
+        headers[key] = value;
+    }
+    return headers;
+}
+
+function getDispatcher(useProxy) {
+    if (!useProxy) return null;
+
+    initDispatchers();
+    return PROXY_DISPATCHER;
+}
+
+function appendFormUrlEncoded(pairs, key, value) {
+    if (value === undefined || value === null) return;
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            appendFormUrlEncoded(pairs, `${key}[]`, item);
+        }
+        return;
+    }
+
+    if (typeof value === 'object' && !(value instanceof Date)) {
+        for (const [subKey, subValue] of Object.entries(value)) {
+            appendFormUrlEncoded(pairs, `${key}[${subKey}]`, subValue);
+        }
+        return;
+    }
+
+    pairs.push([key, String(value)]);
+}
+
+function toFormUrlEncoded(data) {
+    if (data == null) return '';
+    if (typeof data === 'string') return data;
+
+    const pairs = [];
+    for (const [key, value] of Object.entries(data || {})) {
+        appendFormUrlEncoded(pairs, key, value);
+    }
+
+    return pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+}
+
+function appendFormData(formData, key, value) {
+    if (value === undefined || value === null) return;
+
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            appendFormData(formData, `${key}[]`, item);
+        }
+        return;
+    }
+
+    if (value instanceof Uint8Array) {
+        formData.append(key, new Blob([value]));
+        return;
+    }
+
+    if (typeof value === 'object' && !(value instanceof Date)) {
+        for (const [subKey, subValue] of Object.entries(value)) {
+            appendFormData(formData, `${key}[${subKey}]`, subValue);
+        }
+        return;
+    }
+
+    formData.append(key, String(value));
+}
+
+function toFormData(data) {
+    if (data == null || data instanceof FormData) return data;
+    const formData = new FormData();
+    if (typeof data === 'object') {
+        for (const [key, value] of Object.entries(data)) {
+            appendFormData(formData, key, value);
+        }
+        return formData;
+    }
+    return data;
+}
 
 function initLocalStorage(storage) {
     if (!_.has(confs, storage)) {
@@ -40,95 +137,82 @@ function localSet(storage, key, value) {
     fs.writeFileSync('local/js_' + storage, JSON.stringify(confs[storage]));
 }
 
-async function request(url, opt) {
+async function request(url, opt = {}) {
+    let timeoutId = null;
     try {
-        var data = opt ? opt.data || null : null;
-        var postType = opt ? opt.postType || null : null;
-        var returnBuffer = opt ? opt.buffer || 0 : 0;
-        var timeout = opt ? opt.timeout || 5000 : 5000;
-        var redirect = (opt ? opt.redirect || 1 : 1) == 1;
+        let data = opt.data || null;
+        const postType = opt.postType || null;
+        const returnBuffer = opt.buffer || 0;
+        const timeout = opt.timeout || DEFAULT_TIMEOUT;
+        const redirect = (opt.redirect || 1) === 1;
+        const headers = opt.headers || {};
 
-        var headers = opt ? opt.headers || {} : {};
         if (postType == 'form') {
             headers['Content-Type'] = 'application/x-www-form-urlencoded';
-
-            if (data != null) {
-                data = qs.stringify(data, {encode: false});
-            }
+            data = toFormUrlEncoded(data);
         } else if (postType == 'form-data') {
-            headers['Content-Type'] = 'multipart/form-data';
             data = toFormData(data);
-        }
-        let respType = returnBuffer == 1 || returnBuffer == 2 ? 'arraybuffer' : undefined;
-        // const agent = tunnel.httpsOverHttp({
-        //     proxy: {
-        //         host: '127.0.0.1', port: 7890,
-        //     }
-        // });
-        let httpAgent;
-        let httpsAgent;
-        if (opt.proxy){
-            httpsAgent = tunnel.httpsOverHttp({
-                    proxy: {
-                        host: '127.0.0.1', port: 7890,
-                    }
-                });
-        }else{
-            httpAgent = new http.Agent({ keepAlive: false });
-            httpsAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: false });
-        }
-        var resp = await axios(url, {
-            responseType: respType,
-            method: opt ? opt.method || 'get' : 'get',
-            headers: headers,
-            data: data,
-            timeout: timeout,
-            maxRedirects: !redirect ? 0 : null,
-            proxy: false,
-            httpAgent: httpAgent,
-            httpsAgent: httpsAgent
-
-        });
-        var data = resp.data;
-
-        var resHeader = {};
-        for (const [key, value] of Object.entries(resp.headers || {})) {
-            resHeader[key] = Array.isArray(value) ? (value.length == 1 ? value[0] : value) : value;
-        }
-
-        if (!returnBuffer) {
-            if (typeof data === 'object') {
+        } else if (data != null && !['get', 'head'].includes((opt.method || 'get').toLowerCase())) {
+            if (typeof data === 'object' && !(data instanceof Uint8Array)) {
+                headers['Content-Type'] = headers['Content-Type'] || 'application/json';
                 data = JSON.stringify(data);
             }
-        } else if (returnBuffer == 1) {
-            return {code: resp.status, headers: resHeader, content: data};
-        } else if (returnBuffer == 2) {
-            return {code: resp.status, headers: resHeader, content: data.toString('base64')};
-        } else if (returnBuffer == 3) {
-            var stream = opt.stream;
-            if (stream['onResp']) await stream['onResp']({code: resp.status, headers: resHeader});
-            if (stream['onData']) {
-                data.on('data', async (data) => {
-                    await stream['onData'](data);
-                });
-                data.on('end', async () => {
-                    if (stream['onDone']) await stream['onDone']();
-                });
-            } else {
-                if (stream['onDone']) await stream['onDone']();
+        }
+
+        const controller = new AbortController();
+        timeoutId = setTimeout(() => {
+            controller.abort();
+        }, timeout);
+
+        const dispatcher = getDispatcher(opt.proxy);
+        const requestInit = {
+            method: opt.method || 'get',
+            headers,
+            body: data,
+            redirect: redirect ? 'follow' : 'manual',
+            signal: controller.signal,
+        };
+        if (dispatcher) requestInit.dispatcher = dispatcher;
+
+        const response = await fetch(url, requestInit);
+
+        const resHeader = normalizeHeaders(response.headers);
+
+        if (returnBuffer == 3) {
+            const stream = opt.stream || {};
+            if (stream.onResp) await stream.onResp({code: response.status, headers: resHeader});
+
+            if (stream.onData && response.body) {
+                const reader = response.body.getReader();
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    await stream.onData(Buffer.from(value));
+                }
             }
+
+            if (stream.onDone) await stream.onDone();
             return 'stream...';
         }
-        return {code: resp.status, headers: resHeader, content: data};
+
+        if (returnBuffer == 1 || returnBuffer == 2) {
+            const responseBuffer = Buffer.from(await response.arrayBuffer());
+            if (returnBuffer == 1) {
+                return {code: response.status, headers: resHeader, content: responseBuffer};
+            }
+            return {code: response.status, headers: resHeader, content: responseBuffer.toString('base64')};
+        }
+
+        const content = await response.text();
+        return {code: response.status, headers: resHeader, content};
     } catch (error) {
-        const errorResp = error.response;
-        try {
-            return {code: errorResp.status, headers: errorResp.headers, content: JSON.stringify(errorResp.data)};
-        } catch (err) {
+        if (error.name === 'AbortError') {
             return {headers: {}, content: ''};
         }
+        return {headers: {}, content: ''};
+    } finally {
+        clearTimeout(timeoutId);
     }
-    return {headers: {}, content: ''};
 }
 
 function base64EncodeBuf(buff, urlsafe = false) {

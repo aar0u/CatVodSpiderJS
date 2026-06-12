@@ -30,6 +30,13 @@ node scripts/test-spider.mjs
 
 当前测试用例在 `scripts/test-spider.mjs` 内配置。
 
+## 项目结构说明
+
+根目录不再作为 npm 管理单元，不再需要在根目录执行 `npm install`。
+
+- 根目录：业务脚本与测试脚本（如 `scripts/test-spider.mjs`、`scripts/build-config.mjs`）直接使用仓库内本地模块。
+- 依赖环境：仅 `proxy/` 仍有独立的 `package.json`，需要依赖时只在该目录下安装。
+
 ## 启动 proxy
 
 ```bash
