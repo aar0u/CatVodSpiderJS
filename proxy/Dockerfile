@@ -44,7 +44,7 @@ RUN cd catvodspiderjs/proxy && npm install
 
 RUN npm install -g pm2
 
-RUN npx playwright install --with-deps chromium
+RUN cd catvodspiderjs/proxy && npx playwright install --with-deps chromium
 
 # VNC
 ENV DISPLAY=:99
