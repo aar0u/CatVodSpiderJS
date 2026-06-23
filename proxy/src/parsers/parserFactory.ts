@@ -7,6 +7,8 @@ export const parserFactory = {
       return new DefaultParser();
     } else if (url.includes("9anime")) {
       return new DefaultParser();
+    } else if (url.includes("animesuge")) {
+      return new DefaultParser();
     }
     throw new Error("Unsupported parser type");
   },
