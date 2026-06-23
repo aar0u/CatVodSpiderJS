@@ -1,5 +1,15 @@
 [
   {
+    "api": "./js/animesuge.js",
+    "searchable": 1,
+    "changeable": 0,
+    "key": "animesuge",
+    "name": "🥇AnimeSuge🥇",
+    "timeout": 50,
+    "ext": {},
+    "type": 3
+  },
+  {
     "api": "./js/9anime.js",
     "searchable": 1,
     "changeable": 0,
