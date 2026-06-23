@@ -21,7 +21,7 @@
   },
   {
     "api": "./js/123anime.js",
-    "searchable": 0,
+    "searchable": 1,
     "changeable": 0,
     "key": "123animehub",
     "name": "🥇123anime🥇",

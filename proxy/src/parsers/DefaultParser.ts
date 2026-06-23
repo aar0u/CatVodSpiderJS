@@ -102,9 +102,9 @@ export class DefaultParser implements BaseParser {
     try {
       const data = await response.json();
       const source = Array.isArray(data?.sources)
-        ? data.sources.find((item) => item?.file?.includes(".m3u8"))
+        ? data.sources.find((item) => item?.file?.includes(".m3u8") || item?.includes?.(".m3u8"))
         : data?.sources;
-      const file = source?.file;
+      const file = typeof source === "string" ? source : source?.file;
 
       if (!file?.includes(".m3u8") || this.playable.url) return false;
 

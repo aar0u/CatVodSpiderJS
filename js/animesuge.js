@@ -138,11 +138,11 @@ class ABC extends RemoteRenderSpider {
       vod.vod_name = vodName;
       vod.vod_pic = $item.find(".poster img, img").first().attr("data-src") ||
         $item.find(".poster img, img").first().attr("src");
-      vod.vod_remarks = $item
-        .find(".dub-sub-total, .item-status")
-        .text()
-        .replace(/\s+/g, " ")
-        .trim();
+      const sub = $item.find(".dub-sub-total .sub").first().text().match(/\d+/)?.[0];
+      const dub = $item.find(".dub-sub-total .dub").first().text().match(/\d+/)?.[0];
+      vod.vod_remarks = [sub && `SUB ${sub}`, dub && `DUB ${dub}`]
+        .filter(Boolean)
+        .join(" ");
       vodList.push(vod);
     });
 
@@ -150,13 +150,23 @@ class ABC extends RemoteRenderSpider {
   }
 
   getEpisodes($, id) {
-    const totalEpisodes = Number(this.getMetaValue($, "Episodes:"));
+    const totalEpisodes = this.getEpisodeCount($);
     if (!totalEpisodes) return [];
 
     return Array.from({ length: totalEpisodes }, (_, index) => {
       const episode = index + 1;
       return `${episode}$${id}/ep-${episode}`;
     });
+  }
+
+  getEpisodeCount($) {
+    const declared = Number(this.getMetaValue($, "Episodes:"));
+    if (declared) return declared;
+
+    const dubCount = Number($("#media-info .dub-sub-total .dub").first().text().match(/\d+/)?.[0]);
+    if (dubCount) return dubCount;
+
+    return Number($("#media-info .dub-sub-total .sub").first().text().match(/\d+/)?.[0]) || 0;
   }
 
   getMetaValue($, label) {
