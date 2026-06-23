@@ -8,8 +8,7 @@ const jadeLog = new JadeLogging(Utils.getCurrentFileName(), "DEBUG");
 
 class ABC extends RemoteRenderSpider {
   DOMAIN = "https://123animehub.cc";
-  PLAY_REFERER = "https://play.bunnycdn.to/";
-  PLAY_FLAG = "span.tip.tab[data-name='10']";
+  PLAY_REFERER = "https://play2.echovideo.ru/";
 
   async homeContent(filter) {
     jadeLog.info("homeContent params: filter=" + filter + ", browser proxy=" + this.PROXY_URL);
@@ -94,14 +93,18 @@ class ABC extends RemoteRenderSpider {
   async detailContent(ids) {
     jadeLog.info(`detailContent params: ids=${ids}`);
 
-    const url = `${this.PROXY_URL}/url?url=${encodeURIComponent(this.DOMAIN + ids)}`;
+    const url = `${this.PROXY_URL}/url?raw=1&url=${encodeURIComponent(this.DOMAIN + ids)}`;
     try {
       const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
-      const json = JSON.parse(res.content);
-      const $ = load(json.html);
+      const $ = load(res.content);
 
       const vodDetail = new VodDetail();
       vodDetail.vod_id = ids[0];
+      vodDetail.vod_name =
+        $("h1.title").first().attr("data-jtitle") ||
+        $("h1.title").first().text().replace(/^\s*\S+\s*/, "").trim() ||
+        $('meta[property="og:title"]').attr("content")?.replace(/^Watch\s+/i, "") ||
+        "";
 
       // Get poster image from meta tag
       const ogImage = $('meta[property="og:image"]').attr("content");
@@ -155,24 +158,18 @@ class ABC extends RemoteRenderSpider {
         }
       });
 
-      const playFromList = [];
-      const playUrlsList = [];
-
       const episodes = [];
       $(".episodes.range a[data-base]").each((_, ep) => {
         const $ep = $(ep);
         const epNumber = $ep.attr("data-base");
         const epUrl = $ep.attr("href");
-        if (epUrl) {
-          episodes.push(`${epNumber}$${epUrl}`);
-        }
+        if (epUrl) episodes.push(`${epNumber}$${epUrl}`);
       });
 
-      playFromList.push("Default$$$");
-      playUrlsList.push(episodes.join("#") + "$$$");
-
-      vodDetail.vod_play_from = playFromList.join("");
-      vodDetail.vod_play_url = playUrlsList.join("");
+      const playFromList = this.getPlaySourcesFromPage($);
+      const playUrl = episodes.join("#");
+      vodDetail.vod_play_from = playFromList.join("$$$");
+      vodDetail.vod_play_url = playFromList.map(() => playUrl).join("$$$");
 
       this.vodDetail = vodDetail;
     } catch (e) {
@@ -189,6 +186,35 @@ class ABC extends RemoteRenderSpider {
     return output;
   }
 
+  async getPlayClicks(flag, id) {
+    const source = await this.getPlaySource(flag, id);
+    return source ? [`span.tip.tab[data-name='${source.id}']`] : [];
+  }
+
+  async getPlaySource(flag, id) {
+    this.playSourceCache = this.playSourceCache || {};
+    if (!this.playSourceCache[id]) {
+      const url = `${this.PROXY_URL}/url?raw=1&url=${encodeURIComponent(this.DOMAIN + id)}`;
+      const res = await req(url, { method: "get", timeout: this.REQ_TIMEOUT });
+      const $ = load(res.content);
+      this.playSourceCache[id] = this.getPlaySourcesFromPage($, true);
+    }
+    return this.playSourceCache[id].find((source) => source.name === flag);
+  }
+
+  getPlaySourcesFromPage($, includeIds = false) {
+    const sources = [];
+    const seen = new Set();
+    $(".widget.servers .tabs .tip.tab[data-name]").each((_, item) => {
+      const $item = $(item);
+      const id = $item.attr("data-name");
+      const name = $item.text().trim();
+      if (!id || !name || seen.has(name)) return;
+      seen.add(name);
+      sources.push(includeIds ? { name, id } : name);
+    });
+    return sources;
+  }
 
   async setSearch(key, quick, pg) {
     const cheerio = await this.getHtml(this.DOMAIN + "/search?keyword=" + key);

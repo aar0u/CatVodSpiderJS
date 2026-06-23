@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as Utils from "../lib/utils.js";
 import "../wrapper/index.js";
 
@@ -37,8 +39,17 @@ const testCases = {
       },
     ],
   },
-  "9anime": {
+  animesuge: {
     enabled: true,
+    init: { ext: {}, stype: 3 },
+    tests: [
+      { enabled: true, fn: "home", args: [true] },
+      { enabled: true, fn: "search", args: ["One Piece"] },
+      { enabled: true, fn: "detail", args: ["/anime/one-piece-odmau"] },
+    ],
+  },
+  "9anime": {
+    enabled: false,
     init: { ext: {}, stype: 3 },
     tests: [
       { enabled: true, fn: "home", args: [true] },
