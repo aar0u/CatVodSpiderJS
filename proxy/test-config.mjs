@@ -9,6 +9,23 @@ const TEST_SOURCE = "饭太硬";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function sanitizeFileName(name) {
+  return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
+}
+
+function resolveOutputPath(target, outputArg) {
+  if (outputArg) {
+    return path.resolve(process.cwd(), outputArg);
+  }
+  return path.join(__dirname, "output", `${sanitizeFileName(target)}.json`);
+}
+
+function writeOutput(data, outputPath) {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
+  console.log(`[SUCCESS] 已输出 JSON: ${outputPath}`);
+}
+
 function loadConfig() {
   const configPath = path.join(__dirname, "src/config/cfg.json");
   const data = fs.readFileSync(configPath, "utf-8");
@@ -84,10 +101,14 @@ async function fetchAndProcess(url, name) {
 async function main() {
   const config = loadConfig();
   const target = process.argv[2] || TEST_SOURCE;
+  const outputPath = resolveOutputPath(target, process.argv[3]);
   const url = config.sources[target];
-  
+
   if (url) {
-    await fetchAndProcess(url, target);
+    const data = await fetchAndProcess(url, target);
+    if (data) {
+      writeOutput(data, outputPath);
+    }
   } else {
     console.log(`[ERROR] 未找到源: ${target}`);
     console.log(`[INFO] 可用源: ${Object.keys(config.sources).join(", ")}`);

@@ -150,20 +150,24 @@ export const jsonController = {
 
       let allSites = cfgData.sites || [];
       if (config !== "饭太硬" && urls.sources["饭太硬"]) {
-        console.log(`Additionally retrieving "饭太硬" for "秒播" sites`);
+        const ftyKeywords = ["秒播", "动漫", "不卡"];
+        console.log(
+          `Additionally retrieving "饭太硬" for "${ftyKeywords.join("/")}" sites`,
+        );
         const ftyData = await fetchConfigData(urls.sources["饭太硬"]);
         if (ftyData && ftyData.sites) {
           const ftySites = ftyData.sites
             .filter(
               (site: { name: string }) =>
-                site.name && site.name.includes("秒播"),
+                site.name &&
+                ftyKeywords.some((keyword) => site.name.includes(keyword)),
             )
             .map((site: { name: string }) => ({
               ...site,
               name: `[饭]${site.name}`,
               jar: ftyData.spider,
             }));
-          allSites = [...allSites, ...ftySites];
+          allSites = [...ftySites, ...allSites];
         }
       }
 
