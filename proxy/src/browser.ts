@@ -1,14 +1,11 @@
 import { execSync } from "child_process";
 
-import { Browser, Response, Page } from "playwright";
-import { chromium } from "playwright-extra";
-import stealth from "puppeteer-extra-plugin-stealth";
+import { chromium } from "playwright";
+import type { Browser, Response, Page } from "playwright";
 
 import { BaseParser } from "./parsers/BaseParser";
+import { applyLightweightStealth } from "./stealth";
 import { color, logError } from "./utils";
-
-// 使用 stealth 插件
-chromium.use(stealth());
 
 // 默认开启 Headless，除非环境变量显式指定 HEADLESS=false
 const IS_HEADLESS = process.env.HEADLESS !== "false";
@@ -33,7 +30,7 @@ const launch = async () => {
   });
 
   console.log(
-    `Browser launched (Chromium + Stealth) [Headless: ${IS_HEADLESS}] [Timeouts: Browser=${BROWSER_TIMEOUT / SECOND}s, Page=${TIMEOUT_PAGE / SECOND}s, CloseDelay=${PAGE_CLOSE_DELAY / SECOND}s]`,
+    `Browser launched (Chromium) [Headless: ${IS_HEADLESS}] [Timeouts: Browser=${BROWSER_TIMEOUT / SECOND}s, Page=${TIMEOUT_PAGE / SECOND}s, CloseDelay=${PAGE_CLOSE_DELAY / SECOND}s]`,
   );
 
   return browser;
@@ -140,7 +137,10 @@ export default async function (
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     viewport: { width: 1280, height: 800 },
+    locale: "en-MY",
+    timezoneId: "Asia/Kuala_Lumpur",
   });
+  await applyLightweightStealth(context);
 
   const page: Page = await context.newPage();
 
@@ -211,7 +211,8 @@ export default async function (
       if (selectors.length && !page.isClosed()) {
         const setupSelectors = selectors.slice(0, -1);
         const triggerSelector = selectors[selectors.length - 1];
-        if (setupSelectors.length) await parser.beforeHandleResponse(page, setupSelectors);
+        if (setupSelectors.length)
+          await parser.beforeHandleResponse(page, setupSelectors);
         page.on("response", responseHandler);
         await parser.beforeHandleResponse(page, triggerSelector);
       }
