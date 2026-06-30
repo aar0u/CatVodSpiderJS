@@ -81,16 +81,20 @@ class ABC extends RemoteRenderSpider {
   }
 
   async getPlaySources(episodeId) {
-    const { servers } = await this.getEpisodeServers(episodeId);
-    return servers.map((server) => server.name).filter(Boolean);
+    const { subServers, dubServers } = await this.getEpisodeServers(episodeId);
+    return [
+      ...dubServers.map((server) => this.formatPlayFlag("dub", server.name)),
+      ...subServers.map((server) => this.formatPlayFlag("sub", server.name)),
+    ].filter(Boolean);
   }
 
   async getPlayClicks(flag, id) {
-    const { servers } = await this.getEpisodeServers(id);
-    if (!servers.some((server) => server.name === flag)) return [];
+    const { subServers, dubServers } = await this.getEpisodeServers(id);
+    const selection = this.selectServer(flag, subServers, dubServers);
+    if (!selection) return [];
 
     return [
-      `xpath=//div[contains(concat(' ', normalize-space(@class), ' '), ' server-type ') and @data-type='dub']//div[contains(concat(' ', normalize-space(@class), ' '), ' server ')][.//span[normalize-space()=${this.xpathLiteral(flag)}] or normalize-space()=${this.xpathLiteral(flag)}]`,
+      `xpath=//div[contains(concat(' ', normalize-space(@class), ' '), ' server-type ') and @data-type=${this.xpathLiteral(selection.type)}]//div[contains(concat(' ', normalize-space(@class), ' '), ' server ')][.//span[normalize-space()=${this.xpathLiteral(selection.server.name)}] or normalize-space()=${this.xpathLiteral(selection.server.name)}]`,
     ];
   }
 
@@ -99,24 +103,52 @@ class ABC extends RemoteRenderSpider {
   }
 
   async getEpisodeServers(id) {
-    if (!id?.includes("/ep-")) return { servers: [], hasDub: false };
+    if (!id?.includes("/ep-")) return { subServers: [], dubServers: [] };
     this.serverCache = this.serverCache || {};
     if (this.serverCache[id]) return this.serverCache[id];
 
     const rawUrl = `${this.PROXY_URL}/url?raw=1&url=${encodeURIComponent(`${this.DOMAIN}${id}`)}`;
     const $ = await this.getHtml(rawUrl);
+    const subServers = this.parseServers($, "sub");
+    const dubServers = this.parseServers($, "dub");
+
+    this.serverCache[id] = { subServers, dubServers };
+    return this.serverCache[id];
+  }
+
+  parseServers($, type) {
     const servers = [];
     const seen = new Set();
 
-    $('.server-type[data-type="dub"] .server-list .server').each((_, element) => {
+    $(`.server-type[data-type="${type}"] .server-list .server`).each((_, element) => {
       const name = $(element).find("span").first().text().trim() || $(element).text().trim();
       if (!name || seen.has(name)) return;
       seen.add(name);
       servers.push({ name, url: "https://vidtube.site/" });
     });
 
-    this.serverCache[id] = { servers, hasDub: servers.length > 0 };
-    return this.serverCache[id];
+    return servers;
+  }
+
+  selectServer(flag, subServers, dubServers) {
+    const parsed = this.parsePlayFlag(flag);
+    if (!parsed) return null;
+
+    const servers = parsed.type === "dub" ? dubServers : subServers;
+    const index = servers.findIndex((server) => server.name === parsed.name);
+    if (index < 0) return null;
+
+    return { type: parsed.type, index, server: servers[index] };
+  }
+
+  formatPlayFlag(type, name) {
+    return name ? `${type}-${name}` : "";
+  }
+
+  parsePlayFlag(flag) {
+    const matched = flag?.match(/^(sub|dub)-(.+)$/);
+    if (!matched) return null;
+    return { type: matched[1], name: matched[2] };
   }
 
   getVodList($, selector) {
