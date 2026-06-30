@@ -50,18 +50,20 @@ class ABC extends RemoteRenderSpider {
   }
 
   async getPlayClicks(flag, id) {
-    const { servers, hasDub } = await this.getEpisodeServers(id);
-    const serverIndex = servers.findIndex((server) => server.name === flag);
-    if (serverIndex < 0) return [];
+    const { subServers, dubServers } = await this.getEpisodeServers(id);
+    const selection = this.selectServer(flag, subServers, dubServers);
+    if (!selection) return [];
 
-    const serverSelector = `.server-btn[data-index="${serverIndex}"]`;
-    return hasDub ? [serverSelector, '.type-tab[data-type="dub"]'] : [serverSelector];
+    const serverSelector = `.server-btn[data-index="${selection.index}"]`;
+    if (!subServers.length || !dubServers.length) return [serverSelector];
+
+    return [`.type-tab[data-type="${selection.type}"]`, serverSelector];
   }
 
   async getPlayReferer(flag, id, json) {
-    const { servers } = await this.getEpisodeServers(id);
-    const server = servers.find((item) => item.name === flag);
-    return this.getOriginFromUrl(server?.url) || "";
+    const { subServers, dubServers } = await this.getEpisodeServers(id);
+    const selection = this.selectServer(flag, subServers, dubServers);
+    return this.getOriginFromUrl(selection?.server?.url) || "";
   }
 
   async categoryContent(tid, pg, filter, extend) {
@@ -174,24 +176,46 @@ class ABC extends RemoteRenderSpider {
   }
 
   async getPlaySources(episodeId) {
-    const { servers } = await this.getEpisodeServers(episodeId);
-    return servers.map((server) => server.name).filter(Boolean);
+    const { subServers, dubServers } = await this.getEpisodeServers(episodeId);
+    return [
+      ...dubServers.map((server) => this.formatPlayFlag("dub", server.name)),
+      ...subServers.map((server) => this.formatPlayFlag("sub", server.name)),
+    ].filter(Boolean);
   }
 
   async getEpisodeServers(id) {
-    if (!id?.includes("/episode-")) return { servers: [], hasDub: false };
+    if (!id?.includes("/episode-")) return { subServers: [], dubServers: [] };
     this.serverCache = this.serverCache || {};
     if (this.serverCache[id]) return this.serverCache[id];
 
     const $ = await this.getHtml(`${this.DOMAIN}${id}`);
     const html = $.html();
-    const hasDub = (html.match(/currentEpHasDub\s*:\s*(true|false)/) || [])[1] === "true";
     const subServers = this.parseServerList(html, "subServers");
     const dubServers = this.parseServerList(html, "dubServers");
-    const servers = hasDub && dubServers.length ? dubServers : subServers;
 
-    this.serverCache[id] = { servers, hasDub };
+    this.serverCache[id] = { subServers, dubServers };
     return this.serverCache[id];
+  }
+
+  selectServer(flag, subServers, dubServers) {
+    const parsed = this.parsePlayFlag(flag);
+    if (!parsed) return null;
+
+    const servers = parsed.type === "dub" ? dubServers : subServers;
+    const index = servers.findIndex((server) => server.name === parsed.name);
+    if (index < 0) return null;
+
+    return { type: parsed.type, index, server: servers[index] };
+  }
+
+  formatPlayFlag(type, name) {
+    return name ? `${type}-${name}` : "";
+  }
+
+  parsePlayFlag(flag) {
+    const matched = flag?.match(/^(sub|dub)-(.+)$/);
+    if (!matched) return null;
+    return { type: matched[1], name: matched[2] };
   }
 
   parseServerList(html, key) {

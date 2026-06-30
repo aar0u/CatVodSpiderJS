@@ -187,10 +187,11 @@ export default async function (
     page.on("response", responseHandler);
   }
 
-  // 3. 开始跳转
+  // 3. 开始跳转。不要等 networkidle：视频站通常会持续拉取播放器/统计/媒体请求，
+  // 页面已经可交互但网络不会空闲，容易卡到 goto 超时。
   page
     .goto(url, {
-      waitUntil: "networkidle",
+      waitUntil: "domcontentloaded",
       timeout: 60 * SECOND,
     })
     .then(async () => {

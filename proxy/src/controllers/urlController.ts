@@ -36,7 +36,7 @@ async function handleRawMode(targetUrl: string, res: ServerResponse) {
     });
 
     await page.goto(targetUrl, {
-      waitUntil: "networkidle",
+      waitUntil: "domcontentloaded",
       timeout: 60 * 1000,
     });
 
@@ -115,7 +115,9 @@ export const urlController = {
     const selectors = url.searchParams.getAll("click");
     const raw = url.searchParams.get("raw");
 
-    console.log(`[URL] ${url.pathname}, ${targetUrl}, ${selectors.join(" -> ")}, raw=${raw}`);
+    console.log(
+      `[URL] ${url.pathname}, ${targetUrl}, ${selectors.join(" -> ")}, raw=${raw}`,
+    );
 
     if (!targetUrl) {
       res.setHeader("Content-Type", "application/json; charset=utf-8");
