@@ -23,6 +23,8 @@ RUN echo ${TARGETARCH} && \
     vim \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN npm install -g pm2
+
 # Create others directory
 RUN mkdir -p ./catvodspiderjs ./others
 
@@ -33,6 +35,11 @@ RUN echo '#!/bin/bash\nvim /app/catvodspiderjs/proxy/src/config/cfg.json' > /usr
 # Set tmux mouse mode enabled by default
 RUN echo 'set -g mouse on' > /root/.tmux.conf
 
+# Install dependencies and Chromium before copying frequently changed source files.
+COPY ./proxy/package.json ./catvodspiderjs/proxy/
+RUN cd catvodspiderjs/proxy && npm install
+RUN cd catvodspiderjs/proxy && npx playwright install --with-deps chromium
+
 # Static files and library assets
 COPY ./json ./catvodspiderjs/json
 COPY ./js ./catvodspiderjs/js
@@ -40,11 +47,6 @@ COPY ./lib ./catvodspiderjs/lib
 
 # Code directory, for volume mount -v $(pwd)/src:/app/catvodspiderjs/proxy/src
 COPY ./proxy ./catvodspiderjs/proxy
-RUN cd catvodspiderjs/proxy && npm install
-
-RUN npm install -g pm2
-
-RUN cd catvodspiderjs/proxy && npx playwright install --with-deps chromium
 
 # VNC
 ENV DISPLAY=:99

@@ -1,0 +1,9 @@
+.git
+.github
+node_modules
+**/node_modules
+log
+**/log
+proxy/output
+.DS_Store
+**/.DS_Store
