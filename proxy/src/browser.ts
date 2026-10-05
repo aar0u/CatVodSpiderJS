@@ -24,8 +24,11 @@ const TIMEOUT_PAGE = parseInt(process.env.PAGE_TIMEOUT || "120") * SECOND;
 const PAGE_CLOSE_DELAY = parseInt(process.env.PAGE_CLOSE_DELAY || "2") * SECOND;
 
 const launch = async () => {
+  const executablePath = process.env.CHROMIUM_PATH;
+
   const browser = await chromium.launch({
     headless: IS_HEADLESS,
+    ...(executablePath ? { executablePath } : {}),
     args: ["--disable-blink-features=AutomationControlled", "--disable-gpu"],
   });
 
